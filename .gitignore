@@ -1,1 +1,10 @@
 /models/
+/logs/
+/datasets/
+/configs/
+.idea/
+__pycache__/
+
+
+/backup.sh
+/backup.txt
