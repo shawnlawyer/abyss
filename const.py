@@ -23,7 +23,7 @@ SETTINGS = {
 }
 
 DEFAULTS = {
-    "model_filename": "aibyss.h5",
+    "model_filename": "abyss.h5",
     "datasets": ['cmc', 'persona_chat'],
     "max_length": 256,
     "vocab_size": 256,

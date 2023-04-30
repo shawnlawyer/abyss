@@ -1,11 +1,9 @@
-from os.path import isfile, join, exists
-from tensorflow.keras.models import load_model
+from os.path import isfile, join
 import click
 from lib import load_config
 from util import DataObject
-import bless
+import gui
 import cli
-import seq2seq
 from const import DEFAULTS, SETTINGS
 from lang.en import HELP
 
@@ -54,7 +52,7 @@ def main(**kwargs):
                 setattr(args, key, None if value == "None" else value)
         cli.main(args)
     else:
-        bless.main()
+        gui.main()
 
 if __name__ == "__main__":
     main()

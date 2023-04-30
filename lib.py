@@ -78,7 +78,7 @@ def load_config(filename):
 
 def configs_form(args):
     configs = generate_input_fields(args, DEFAULTS, CONFIG_FORM_LABELS)
-    config_filename = (input("Enter a name to save this config (without aibyss.json extension): ") or "aibyss") + ".json"
+    config_filename = (input("Enter a name to save this config (without abyss.json extension): ") or "abyss") + ".json"
     config_filepath = join(settings.configs_dir, config_filename)
     save_config(configs, config_filepath)
     print(f"Config saved to: {config_filepath}")

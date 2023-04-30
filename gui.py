@@ -4,19 +4,16 @@ from glob import glob
 import subprocess
 from tensorflow.keras.models import load_model
 from blessed import Terminal
-from util import DataObject, float_or_none
+from util import DataObject
 import seq2seq
 from const import *
-from lang.en import HELP, CONFIG_FORM_LABELS
-from lib import build, save_config, load_config
-from bf import model_config_form
-
+from lib import save_config, load_config
+import time
 
 settings = DataObject(SETTINGS)
 defaults = DataObject(DEFAULTS)
 actions = DataObject(ACTIONS)
 screens = DataObject(SCREENS)
-config_form_labels = DataObject(CONFIG_FORM_LABELS)
 
 term = Terminal()
 def menu(options, header=None, x=0, y=0):
@@ -45,8 +42,8 @@ def menu(options, header=None, x=0, y=0):
 
 def draw_dashboard():
     print(term.home + term.clear)
-    # AIbyss Title
-    print(term.move_y(2) + term.center(('AIbyss Dashboard')))
+    # Abyss Title
+    print(term.move_y(2) + term.center(('Abyss Dashboard')))
     print(term.move_y(term.height // 4))
 
     with term.location(0, term.height - 1):
@@ -150,29 +147,85 @@ def transfer_knowledge_screen():
             print(term.center("One or both model paths do not exist. Please check the paths and try again."))
             term.inkey()
 
-def configs_form(args):
-    configs = generate_input_fields(args, DEFAULTS, CONFIG_FORM_LABELS)
-    config_filename = (input("Enter a name to save this config (without aibyss.json extension): ") or "aibyss") + ".json"
-    config_filepath = join(settings.configs_dir, config_filename)
-    save_config(configs, config_filepath)
-    print(f"Config saved to: {config_filepath}")
-    return configs
+def form_fields(values, labels, validators):
+    fields = []
 
-def generate_input_fields(args, fields, labels):
-    configs = {}
-    for key, field in fields.items():
-        prompt = labels[key]
-        default_value = getattr(args, key)
-        if key == 'datasets':
-            input_value = (input(prompt.format(','.join(default_value))) or ','.join(default_value)).split(',')
-        elif key == 'randomize_sample':
-            input_value = bool(int(input(prompt.format(int(default_value))) or default_value))
-        elif key == 'gradient_clip':
-            input_value = float_or_none(input(prompt.format(default_value)) or default_value)
+    for key in values:
+        value = values[key]
+        if isinstance(value, list):  # Convert list to comma-separated string
+            value = ', '.join(value)
+        fields.append({'key':key, 'prompt': labels[key] + ": ", 'response': str(value), 'validator':validators[key], 'active': False})
+    return fields
+
+def draw_form(fields):
+    for idx, field in enumerate(fields):
+        if field['active']:
+            # Toggle the display of the cursor character.
+            if time.time() % 1 < 0.5:
+                line = term.reverse + field['prompt'] + term.normal + field['response'] + '|'
+            else:
+                line = term.reverse + field['prompt'] + term.normal + field['response']
         else:
-            input_value = type(default_value)(input(prompt.format(default_value)) or default_value)
-        configs[key] = input_value
-    return configs
+            line = field['prompt'] + field['response']
+
+        if not field['validator'](field['response']):
+            line += term.red(f'  Invalid input for field "{field["prompt"]}"!')
+
+        print(line)
+
+def model_config_form():
+    fields=[{'key':'name', 'prompt': 'Name: ', 'response': 'abyss', 'validator': lambda s: s.isalpha(), 'active': True}]
+    fields.extend(form_fields(DEFAULTS, DEFAULTS_LABELS, VALIDATORS))
+    return form(fields)
+
+def form(fields):
+    current_field = 0
+    with term.cbreak(), term.hidden_cursor():
+        print(term.home + term.clear)
+        draw_form(fields)
+        while True:
+            key = term.inkey(timeout=0.1)  # Lower timeout for smoother blinking.
+            if not key and not key.is_sequence:
+                print(term.home + term.clear)
+                draw_form(fields)
+                continue
+            if key.is_sequence:
+                if key.name == 'KEY_ENTER':
+                    invalid_fields = [field['prompt'] for field in fields if not field['validator'](field['response'])]
+                    if invalid_fields:
+                        print(f'These fields have invalid inputs: {", ".join(invalid_fields)}')
+                    else:
+                        values = {}
+                        for field in fields:
+                            values[field['key']] = field['response']
+                        converted_dict = {}
+                        for key, value in values.items():
+                            if key in CONVERTERS:
+                                try:
+                                    converted_dict[key] = CONVERTERS[key](value)
+                                except Exception as e:
+                                    print(f"Error converting key {key}: {e}")
+                            else:
+                                print(f"No converter found for key {key}. Keeping value as is.")
+                                converted_dict[key] = value
+                        return converted_dict
+
+                elif key.name == 'KEY_UP':
+                    if current_field > 0:
+                        fields[current_field]['active'] = False
+                        current_field -= 1
+                        fields[current_field]['active'] = True
+                elif key.name == 'KEY_DOWN':
+                    if current_field < len(fields) - 1:
+                        fields[current_field]['active'] = False
+                        current_field += 1
+                        fields[current_field]['active'] = True
+                elif key.name == 'KEY_BACKSPACE':
+                    fields[current_field]['response'] = fields[current_field]['response'][:-1]
+            else:
+                fields[current_field]['response'] += key
+            print(term.home + term.clear)
+            draw_form(fields)
 
 
 
