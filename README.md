@@ -7,13 +7,6 @@ This script is designed to train a sequence-to-sequence model using TensorFlow a
 - TensorFlow 2.x
 - Python 3.x
 
-##Download Corpus
-````
-# Run script to download corpus
-
-bash corpus.sh
-````
-
 ## Usage
 
 To train the model, run the script from the command line with the desired arguments:
@@ -53,11 +46,11 @@ Options:
 
 You can load and save the configuration using JSON files. To load a configuration file, use the `--config` option:
 
-python train_seq2seq.py --config config.json
+python main.py --config config.json
 
 To save the current configuration to a JSON file, use the `--save-config` option:
 
-python train_seq2seq.py --save-config config.json
+python main.py --save-config config.json
 
 ## Notes
 
@@ -65,9 +58,4 @@ python train_seq2seq.py --save-config config.json
 - The model is built using Keras' functional API.
 - The script supports early stopping, model checkpointing, TensorBoard logging, and learning rate reduction on plateau.
 - The script can load and save configurations from JSON files, as well as accept command-line arguments for overriding default settings.
-
-## Suggestions for Improvement
-
-1. Consider adding more command-line arguments for other hyperparameters if you think you'll need to fine-tune them during training.
-2. Review the existing callbacks and add or modify them as needed. For example, you could add a `CSVLogger` callback to log training metrics to
 
