@@ -1,6 +1,7 @@
+import os
 from os.path import isfile, join
 import click
-from lib import load_config
+from lib import load_config, make_system_directories
 from util import DataObject
 import gui
 import cli
@@ -55,4 +56,5 @@ def main(**kwargs):
         gui.main()
 
 if __name__ == "__main__":
+    make_system_directories()
     main()

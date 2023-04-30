@@ -37,16 +37,6 @@ def tokenize_data(data):
 def pad_data(data, max_length):
     return [(pad_sequences([q], maxlen=max_length, padding='post', value=0)[0], pad_sequences([a], maxlen=max_length, padding='post', value=0)[0]) for q, a in data]
 
-def load_and_preprocess_data(data_file, max_length):
-    data = load_data_from_file(data_file)
-    tokenized = tokenize_data(data)
-    padded = pad_data(tokenized, max_length)
-
-    x = np.array([q for q, a in padded])
-    y = np.array([a.reshape(-1, 1) for q, a in padded])
-
-    return x, y
-
 def load_and_preprocess_multiple_data_files(data_files, max_length, slice_records=0, randomize=False):
     all_data = []
 
@@ -62,8 +52,6 @@ def load_and_preprocess_multiple_data_files(data_files, max_length, slice_record
     # Clip and randomize
     if slice_records > 0:
         all_data = all_data[:slice_records]
-
-
 
     # Tokenize and pad data
     tokenized = tokenize_data(all_data)

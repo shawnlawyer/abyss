@@ -84,18 +84,6 @@ def configs_form(args):
     print(f"Config saved to: {config_filepath}")
     return configs
 
-def generate_input_fields(args, fields, labels):
-    configs = {}
-    for key, field in fields.items():
-        prompt = labels[key]
-        default_value = getattr(args, key)
-        if key == 'datasets':
-            input_value = (input(prompt.format(','.join(default_value))) or ','.join(default_value)).split(',')
-        elif key == 'randomize_sample':
-            input_value = bool(int(input(prompt.format(int(default_value))) or default_value))
-        elif key == 'gradient_clip':
-            input_value = float_or_none(input(prompt.format(default_value)) or default_value)
-        else:
-            input_value = type(default_value)(input(prompt.format(default_value)) or default_value)
-        configs[key] = input_value
-    return configs
+def make_system_directories():
+    for dir in ["configs_dir", "logs_dir", "datasets_dir", "models_dir"]:
+        os.makedirs(SETTINGS[dir], exist_ok=True)
