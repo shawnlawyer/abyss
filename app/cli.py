@@ -1,6 +1,6 @@
 from os.path import isfile, join, exists
 from tensorflow.keras.models import load_model
-from lib import load_config, save_config, build, train
+from lib import save_config, build, train
 from util import DataObject
 import seq2seq
 from const import DEFAULTS, SETTINGS

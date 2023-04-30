@@ -59,11 +59,11 @@ def train(model, args):
         test_data_filepaths.append(join(settings.datasets_dir, dataset, settings.test_data_filename))
 
     history = seq2seq.train(model,
-                    args.batch_size,
-                    args.epochs,
-                    load_and_preprocess_multiple_data_files(train_data_filepaths, args.max_length, args.sample_size, args.randomize_sample),
-                    load_and_preprocess_multiple_data_files(test_data_filepaths, args.max_length, args.sample_size, args.randomize_sample),
-                    callbacks)
+                            args.batch_size,
+                            args.epochs,
+                            load_and_preprocess_multiple_data_files(train_data_filepaths, args.max_length, args.sample_size, args.randomize_sample),
+                            load_and_preprocess_multiple_data_files(test_data_filepaths, args.max_length, args.sample_size, args.randomize_sample),
+                            callbacks)
 
     seq2seq.save(model, join(settings.models_dir, args.model_filename))
 

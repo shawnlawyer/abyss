@@ -1,14 +1,19 @@
+# Standard library imports
 from os.path import join, basename, exists
-from time import sleep
 from glob import glob
+import time
 import subprocess
+
+# Related third party imports
 from tensorflow.keras.models import load_model
 from blessed import Terminal
+
+# Local application/library specific imports
 from util import DataObject
 import seq2seq
 from const import *
 from lib import save_config, load_config
-import time
+
 
 settings = DataObject(SETTINGS)
 defaults = DataObject(DEFAULTS)
@@ -47,7 +52,7 @@ def draw_dashboard():
     print(term.move_y(term.height // 4))
 
     with term.location(0, term.height - 1):
-        print(term.center('Use Arrow Keys to navigate and Enter to select'), end='')
+        print(term.center('Arrow Keys to Navigate - Enter to Select - ESC to Exit'), end='')
 def main():
     with term.fullscreen(), term.cbreak():
 
@@ -74,16 +79,15 @@ def main():
                 selection = model_options_menu()
 
                 if selection == actions.summary:
-                    subprocess.run(["python", "main.py", "--config", config_file, "--summary"])
+                    subprocess.run(["python", "app", "--config", config_file, "--summary"])
 
 
                 if selection == actions.chat:
-                    subprocess.run(["python", "main.py", "--config", config_file, "--chat", "--no-gpu"])
+                    subprocess.run(["python", "app", "--config", config_file, "--chat", "--no-gpu"])
 
 
                 if selection == actions.train:
-                    subprocess.run(["python", "main.py", "--config", config_file, "--train"])
-            sleep(10)
+                    subprocess.run(["python", "app", "--config", config_file, "--train"])
             selection = ''
             draw_dashboard()
             selection = main_menu()
