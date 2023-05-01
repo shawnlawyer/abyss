@@ -1,15 +1,4 @@
 
-SCREENS = {
-    "load_model": 0,
-    "create_model": 1,
-    "transfer_knowledge": 2
-}
-
-ACTIONS = {
-    "train": 0,
-    "chat": 1,
-    "summary": 2
-}
 
 SETTINGS = {
     "configs_dir": "configs",
@@ -54,8 +43,6 @@ DEFAULTS = {
     "reduce_lr_min_lr": 1e-5,
     "reduce_lr_verbose": True
 }
-SCREENS_LABELS = {key: key.replace('_', ' ').title() for key in SCREENS}
-ACTIONS_LABELS = {key: key.replace('_', ' ').title() for key in ACTIONS}
 SETTINGS_LABELS = {key: key.replace('_', ' ').title() for key in SETTINGS}
 DEFAULTS_LABELS = {key: key.replace('_', ' ').title() for key in DEFAULTS}
 def is_float(s):
