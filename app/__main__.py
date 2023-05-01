@@ -1,8 +1,9 @@
+import os
 from os.path import isfile, join
 import click
-from lib import load_config
+from lib import load_config, make_system_directories
 from util import DataObject
-import gui
+from gui import GUI
 import cli
 from const import DEFAULTS, SETTINGS
 from lang.en import HELP
@@ -52,7 +53,9 @@ def main(**kwargs):
                 setattr(args, key, None if value == "None" else value)
         cli.main(args)
     else:
+        gui = GUI()
         gui.main()
 
 if __name__ == "__main__":
+    make_system_directories()
     main()
