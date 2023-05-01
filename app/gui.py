@@ -30,7 +30,7 @@ class GUI(UI):
         super().__init__()
         self.app_title = APP_TITLE
     def main(self):
-        with self.term.fullscreen(), self.term.cbreak():
+        with self.term.fullscreen(), self.term.cbreak(), self.term.hidden_cursor():
             active_screen = None
             self.draw_screen()
 
@@ -63,38 +63,62 @@ class GUI(UI):
             print(self.term.center('Arrow Keys to Navigate - Enter to Select - ESC to Exit'), end='')
 
     def main_menu(self):
-        header = SCREENS['main_menu']['label']
+        menus = []
 
         config_files = glob(f"{settings.configs_dir}/*.json")
-        if len(config_files) != 0:
-            options_map = ['create_project', 'load_project']
-        else:
+        if len(config_files) == 0:
             options_map = ['create_project']
+        else:
+            options_map = ['create_project', 'load_project']
+
+        header = SCREENS['main_menu']['label']
         options = [SCREENS[value]['label'] for value in options_map]
         position_x = (self.term.width // 5)
         position_y = 4
-        selection = self.menu(options, header, position_x, position_y)
-        self.state.active_screen = options_map[selection]
+        menus.append({'options_map':options_map, 'options':options, 'header':header, 'x':position_x, 'y':position_y})
+
+        if self.state.configs and self.state.config_file:
+            options_map = ['train_model', 'chat_with_model', 'model_summary']
+            header = SCREENS['project_options_menu']['label']
+            options = [SCREENS[value]['label'] for value in ['train_model', 'chat_with_model', 'model_summary']]
+            position_x = (self.term.width // 5 ) * 2
+            position_y = 4
+            menus.append({'options_map':options_map, 'options': options, 'header': header, 'x': position_x, 'y': position_y})
+
+        menu_id, selection = self.menus(menus)
+        self.state.active_screen = menus[menu_id]['options_map'][selection]
 
     def choose_project_menu(self):
+
+        menus = []
+
+        config_files = glob(f"{settings.configs_dir}/*.json")
+        if len(config_files) == 0:
+            options_map = ['create_project']
+        else:
+            options_map = ['create_project', 'load_project']
+
         config_files = glob(f"{settings.configs_dir}/*.json")
         header = SCREENS['choose_project_menu']['label']
         options = [basename(config_file) for config_file in config_files]
         position_x = (self.term.width // 5)
         position_y = 4
-        selection = self.menu(options, header, position_x, position_y)
-        self.state.config_file = options[selection]
+        menus = [{'options_map': options_map, 'options': options, 'header': header, 'x': position_x, 'y': position_y}]
+
+        menu_id, selection = self.menus(menus)
+        self.state.config_file = menus[menu_id]['options'][selection]
         self.state.configs = DataObject(load_config(join(settings.configs_dir, self.state.config_file)))
-        self.state.active_screen = 'project_options_menu'
+        self.state.active_screen = 'main_menu'
 
     def project_options_menu(self):
         header = SCREENS['project_options_menu']['label']
         options_map = ['train_model', 'chat_with_model', 'model_summary']
         options = [SCREENS[value]['label'] for value in options_map]
-        position_x = (self.term.width // 5)
+        position_x = (self.term.width // 5) * 2
         position_y = 4
-        selection = self.menu(options, header, position_x, position_y)
-        self.state.active_screen = options_map[selection]
+        menus = [{'options_map': options_map, 'options': options, 'header': header, 'x': position_x, 'y': position_y}]
+        menu_id, selection = self.menus(menus)
+        self.state.active_screen = menus[menu_id]['options_map'][selection]
 
     def create_project_config_form(self):
         fields = [
@@ -108,12 +132,12 @@ class GUI(UI):
         ]
 
         fields.extend(self.form_fields(DEFAULTS, DEFAULTS_LABELS, VALIDATORS))
-        self.state.configs = self.form(fields)
+        self.state.configs = self.form(fields, (self.term.width // 2)-40, 2, 80, SCREENS['create_project']['label'])
         self.state.config_file = self.state.configs['name'] + '.json'
         config_filepath = join(settings.configs_dir, self.state.config_file)
         self.state.configs.pop('name')
         save_config(self.state.configs, config_filepath)
-        self.state.active_screen = 'project_options_menu'
+        self.state.active_screen = 'main_menu'
 
 if __name__ == "__main__":
     app = GUI()
