@@ -8,143 +8,136 @@ from const import *
 from lib import save_config, load_config
 from os.path import join
 import subprocess
-import select
 from ui import UI
-import re
 
-SCREENS = {
-    "load_model": 0,
-    "create_model": 1,
-    "transfer_knowledge": 2
-}
-
-ACTIONS = {
-    "train": 0,
-    "chat": 1,
-    "summary": 2,
-    "view_train": 3,
-    "view_chat": 4,
-    "view_summary": 5,
-    "view_progress": 6
-}
-
-SCREENS_LABELS = {key: key.replace('_', ' ').title() for key in SCREENS}
-ACTIONS_LABELS = {key: key.replace('_', ' ').title() for key in ACTIONS}
-ACTIONS_LABELS = {key: key.replace('_', ' ').title() for key in ACTIONS}
 settings = DataObject(SETTINGS)
 defaults = DataObject(DEFAULTS)
-actions = DataObject(ACTIONS)
-screens = DataObject(SCREENS)
 
-APP_TITLE = "Abyss Dashboard"
-MAIN_MENU_HEADER = "=== Options ==="
-MAIN_MENU_OPTIONS = ["Load Model", "Create Model", "Transfer Knowledge",
-                     "View Train", "View Chat", "View Summary", "View Progress"]
-MAIN_MENU_OPTION_ROUTES = [w.lower().replace(' ', '_') for w in MAIN_MENU_OPTIONS]
-MODEL_OPTIONS_MENU_HEADER = "=== Model Options ==="
-MODEL_OPTIONS_MENU_OPTIONS = ["Train", "Chat", "Transfer Knowledge"]
+SCREENS = {
+    'main_menu': {'label': 'Main Menu'},
+    'create_project': {'label': 'Create New Project'},
+    'load_project': {'label': 'Load Project'},
+    'project_options_menu': {'label': 'Project Options'},
+    'choose_project_menu': {'label': 'Choose Project'},
+    'train_model': {'label': 'Train Model'},
+    'chat_with_model': {'label': 'Chat With Model'},
+    'model_summary': {'label': 'Model Summary'}
+}
 
+APP_TITLE = "Abyss"
 class GUI(UI):
     def __init__(self):
         super().__init__()
         self.app_title = APP_TITLE
-
     def main(self):
-        with self.term.fullscreen(), self.term.cbreak():
+        with self.term.fullscreen(), self.term.cbreak(), self.term.hidden_cursor():
+            active_screen = None
+            self.draw_screen()
+
             while True:
-                self.draw_dashboard()
-                self.state.selection = self.main_menu()
+                if active_screen != self.state.active_screen:
+                    active_screen = self.state.active_screen
+                    self.draw_screen()
+    def draw_screen(self):
+        self.draw_layout()
+        if self.state.active_screen in [None,'main_menu']:
+            self.main_menu()
+        elif self.state.active_screen == 'create_project':
+            self.create_project_config_form()
+        elif self.state.active_screen == 'project_options_menu': # this is really opening a model project
+            self.project_options_menu()
+        elif self.state.active_screen == 'load_project': # this is really opening a model project
+            self.choose_project_menu()
+        elif self.state.active_screen == 'model_summary':
+            subprocess.run(["python", "app", "--config", self.state.config_file, "--summary", "--no-gpu"])
+        elif self.state.active_screen == 'chat_with_model':
+            subprocess.run(["python", "app", "--config", self.state.config_file, "--chat", "--no-gpu"])
+        elif self.state.active_screen == 'train_model':
+            subprocess.run(["python", "app", "--config", self.state.config_file, "--train"])
+    def draw_layout(self):
+        print(self.term.home + self.term.clear)
+        with self.term.location((self.term.width // 5) + 2,2):
+            print(self.app_title)
 
-                if self.state.selection == screens.transfer_knowledge:
-                    self.transfer_knowledge_screen()
-
-                elif self.state.selection == screens.create_model:
-                    self.state.configs = self.model_config_form()
-                    config_filepath = join(settings.configs_dir, self.state.configs['name'] + '.json')
-                    self.state.configs.pop('name')
-                    save_config(self.state.configs, config_filepath)
-
-                elif self.state.selection == screens.load_model:
-                    self.state.config_file = self.choose_model_menu()
-                    self.state.configs = DataObject(load_config(join(settings.configs_dir, self.state.config_file)))
-                    self.state.selection = self.model_options_menu()
-
-                    if self.state.selection == actions.summary:
-                        subprocess.run(["python", "app", "--config", self.state.config_file, "--summary", "--no-gpu"])
-                    elif self.state.selection == actions.chat:
-                        subprocess.run(["python", "app", "--config", self.state.config_file, "--chat", "--no-gpu"])
-                    elif self.state.selection == actions.train:
-                        subprocess.run(["python", "app", "--config", self.state.config_file, "--train"])
-
-                self.state.selection = None
-                self.draw_dashboard()
+        with self.term.location(0, self.term.height - 1):
+            print(self.term.center('Arrow Keys to Navigate - Enter to Select - ESC to Exit'), end='')
 
     def main_menu(self):
+        menus = []
 
-        header = "=== Options ==="
-        options = ["Load Model", "Create Model", "Transfer Knowledge"]
-        return self.menu(options, header, (self.term.width // 2) - 10, 5)
-
-    def model_options_menu(self):
-
-        header = "=== Model Options ==="
-        options = ["Train", "Chat", "Transfer Knowledge"]
-        return self.menu(options, header, (self.term.width // 2) - 10, 5)
-
-    def choose_model_menu(self):
         config_files = glob(f"{settings.configs_dir}/*.json")
         if len(config_files) == 0:
-            print("No config files found. Enter config manually.")
+            options_map = ['create_project']
         else:
-            header = "=== Select Config ==="
-            options = [basename(config_file) for config_file in config_files]
-            return options[self.menu(options, header, (self.term.width // 2) - 10, 5)]
+            options_map = ['create_project', 'load_project']
 
-    def model_config_form(self):
-        fields = [{'key': 'name', 'prompt': 'Name: ', 'response': 'abyss', 'validator': lambda s: s.isalpha(),
-                   'active': True}]
+        header = SCREENS['main_menu']['label']
+        options = [SCREENS[value]['label'] for value in options_map]
+        position_x = (self.term.width // 5)
+        position_y = 4
+        menus.append({'options_map':options_map, 'options':options, 'header':header, 'x':position_x, 'y':position_y})
+
+        if self.state.configs and self.state.config_file:
+            options_map = ['train_model', 'chat_with_model', 'model_summary']
+            header = SCREENS['project_options_menu']['label']
+            options = [SCREENS[value]['label'] for value in ['train_model', 'chat_with_model', 'model_summary']]
+            position_x = (self.term.width // 5 ) * 2
+            position_y = 4
+            menus.append({'options_map':options_map, 'options': options, 'header': header, 'x': position_x, 'y': position_y})
+
+        menu_id, selection = self.menus(menus)
+        self.state.active_screen = menus[menu_id]['options_map'][selection]
+
+    def choose_project_menu(self):
+
+        menus = []
+
+        config_files = glob(f"{settings.configs_dir}/*.json")
+        if len(config_files) == 0:
+            options_map = ['create_project']
+        else:
+            options_map = ['create_project', 'load_project']
+
+        config_files = glob(f"{settings.configs_dir}/*.json")
+        header = SCREENS['choose_project_menu']['label']
+        options = [basename(config_file) for config_file in config_files]
+        position_x = (self.term.width // 5)
+        position_y = 4
+        menus = [{'options_map': options_map, 'options': options, 'header': header, 'x': position_x, 'y': position_y}]
+
+        menu_id, selection = self.menus(menus)
+        self.state.config_file = menus[menu_id]['options'][selection]
+        self.state.configs = DataObject(load_config(join(settings.configs_dir, self.state.config_file)))
+        self.state.active_screen = 'main_menu'
+
+    def project_options_menu(self):
+        header = SCREENS['project_options_menu']['label']
+        options_map = ['train_model', 'chat_with_model', 'model_summary']
+        options = [SCREENS[value]['label'] for value in options_map]
+        position_x = (self.term.width // 5) * 2
+        position_y = 4
+        menus = [{'options_map': options_map, 'options': options, 'header': header, 'x': position_x, 'y': position_y}]
+        menu_id, selection = self.menus(menus)
+        self.state.active_screen = menus[menu_id]['options_map'][selection]
+
+    def create_project_config_form(self):
+        fields = [
+            {
+                'key': 'name',
+                'prompt': 'Name: ',
+                'response': 'abyss',
+                'validator': lambda s: s.isalpha(),
+                'active': True
+             }
+        ]
+
         fields.extend(self.form_fields(DEFAULTS, DEFAULTS_LABELS, VALIDATORS))
-        return self.form(fields)
-
-    def transfer_knowledge_screen(self):
-        model_files = glob(f"{settings.models_dir}/*.h5")
-
-        if len(model_files) == 0:
-            print(self.term.home + self.term.clear + self.term.move_y(self.term.height // 2))
-            print(self.term.center("No model files found."))
-            self.term.inkey()
-        else:
-            while True:
-                print(self.term.home + self.term.clear)
-                print(self.term.center("\nAvailable models:"))
-                for idx, model_file in enumerate(model_files, start=1):
-                    print(self.term.center(f"{idx}. {basename(model_file)}"))
-                print(self.term.center("Select a source model (enter the number): "))
-                source_model_idx = self.term.inkey()
-                print(self.term.center("Select a target model (enter the number): "))
-                target_model_idx = self.term.inkey()
-
-                if source_model_idx == target_model_idx:
-                    print(self.term.center(
-                        "Error: The same model has been chosen for both source and target. Please choose different models."))
-                    self.term.inkey()
-                else:
-                    break
-
-            source_model_path = model_files[int(source_model_idx) - 1]
-            target_model_path = model_files[int(target_model_idx) - 1]
-
-            if exists(source_model_path) and exists(target_model_path):
-                print(self.term.center("Transferring weights from the source model to the target model..."))
-                source_model = load_model(source_model_path)
-                target_model = load_model(target_model_path)
-                seq2seq.transfer_weights(source_model, target_model)
-                target_model.save(target_model_path)
-                print(self.term.center("Weights transferred successfully and the target model has been updated."))
-                self.term.inkey()
-            else:
-                print(self.term.center("One or both model paths do not exist. Please check the paths and try again."))
-                self.term.inkey()
+        self.state.configs = self.form(fields, (self.term.width // 2)-40, 2, 80, SCREENS['create_project']['label'])
+        self.state.config_file = self.state.configs['name'] + '.json'
+        config_filepath = join(settings.configs_dir, self.state.config_file)
+        self.state.configs.pop('name')
+        save_config(self.state.configs, config_filepath)
+        self.state.active_screen = 'main_menu'
 
 if __name__ == "__main__":
     app = GUI()
