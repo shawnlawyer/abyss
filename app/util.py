@@ -8,11 +8,6 @@ class DataObject:
     def __init__(self, dictionary):
         self.__dict__.update(dictionary)
 
-def float_or_none(value):
-    try:
-        return float(value)
-    except:
-        return None
 def load_data_from_file(file_name):
     data = []
     with open(file_name, 'r', encoding='utf-8') as f:

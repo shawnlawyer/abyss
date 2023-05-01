@@ -1,15 +1,13 @@
+import os
 from os.path import join
 import json
-from util import DataObject, load_and_preprocess_multiple_data_files, float_or_none
+from util import DataObject, load_and_preprocess_multiple_data_files
 import seq2seq
 from const import *
 from lang.en import CONFIG_FORM_LABELS
 
 settings = DataObject(SETTINGS)
 defaults = DataObject(DEFAULTS)
-actions = DataObject(ACTIONS)
-screens = DataObject(SCREENS)
-config_form_labels = DataObject(CONFIG_FORM_LABELS)
 
 def build(args):
     model = seq2seq.build(args.vocab_size, args.embedding_size, args.recurrent_units, args.recurrent_layers,
@@ -75,14 +73,6 @@ def load_config(filename):
     with open(filename, "r") as infile:
         config = json.load(infile)
     return config
-
-def configs_form(args):
-    configs = generate_input_fields(args, DEFAULTS, CONFIG_FORM_LABELS)
-    config_filename = (input("Enter a name to save this config (without abyss.json extension): ") or "abyss") + ".json"
-    config_filepath = join(settings.configs_dir, config_filename)
-    save_config(configs, config_filepath)
-    print(f"Config saved to: {config_filepath}")
-    return configs
 
 def make_system_directories():
     for dir in ["configs_dir", "logs_dir", "datasets_dir", "models_dir"]:
