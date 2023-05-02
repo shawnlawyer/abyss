@@ -126,3 +126,4 @@ SETTINGS_VALIDATORS = {
     "recurrent_types": lambda s: set(s.replace(" ", "").split(',')) <= set(['LSTM', 'GRU']),
     "datasets": lambda s: set(s.replace(" ", "").split(',')) <= set(['cmc', 'persona_chat']),
 }
+LOG_FLAG = "Abyss_Log:"

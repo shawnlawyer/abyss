@@ -1,7 +1,7 @@
 from const import *
 from blessed import Terminal
 import time
-
+import json
 BOX_1 = '╔╗╚╝═║'
 
 def unpack_box_style(box_string):
@@ -22,6 +22,14 @@ class UI:
         self.term = Terminal()
         self.app_title = ""
         self.state = AppState()
+
+    def json_to_report(self, json_str):
+        data = json.loads(json_str)
+        lines = []
+        for key, value in data.items():
+            label = key.replace('_', ' ').title()
+            lines.append(f"{label}: {value}")
+        return lines
 
     def form_fields(self, values, labels, validators):
         fields = []
@@ -122,6 +130,27 @@ class UI:
                 print(self.term.home + self.term.clear)
                 self.draw_form(fields, x, y, width, header, style)
 
+    def draw_box(self, header, text, width, height, x=1, y=1, style=BOX_1):
+        top_left, top_right, bottom_left, bottom_right, horizontal, vertical = unpack_box_style(style)
+
+        # Initialize an empty list to store each line of the box
+        # Draw top border
+        with self.term.location(x, y):
+            print(top_left + header + horizontal * (width - len(header) - 2) + top_right)
+        # Draw text lines
+        lines = text.split('\n')
+        for i in range(height):
+            with self.term.location(x, y + i + 1):
+                if i < len(lines):
+                    line = lines[i]  # truncate if too long
+                    print(self.term.move_x(x) + vertical + lines[i].ljust(width - 2) + vertical)
+                else:
+                    print(self.term.move_x(x) + vertical + ' ' * (width - 2) + vertical)  # print empty line
+
+        # Draw bottom border
+        with self.term.location(x, y + height + 2):
+            print(self.term.move_x(x) + bottom_left + horizontal * (width - 2) + bottom_right)
+
     def get_key_input(self):
         return self.term.inkey(timeout=0.1)  # Lower timeout for smoother blinking.
 
@@ -211,31 +240,6 @@ class UI:
                 elif action == 'field_change_selected':
                     selections[menu_id] = selected
 
-
-def draw_box(header, text, width, height, style=BOX_1):
-    top_left, top_right, bottom_left, bottom_right, horizontal, vertical = unpack_box_style(style)
-
-    # Initialize an empty list to store each line of the box
-    box_lines = []
-
-    # Draw top border
-    box_lines.append(top_left + header + horizontal * (width - len(header) - 2) + top_right)
-
-    # Draw text lines
-    lines = text.split('\n')
-    for i in range(height):
-        if i < len(lines):
-            line = lines[i]
-            line = line if len(line) <= width - 2 else line[:width - 5] + '...'  # truncate if too long
-            box_lines.append(vertical + line.ljust(width - 2) + vertical)
-        else:
-            box_lines.append(vertical + ' ' * (width - 2) + vertical)  # print empty line
-
-    # Draw bottom border
-    box_lines.append(bottom_left + horizontal * (width - 2) + bottom_right)
-
-    # Join the list of lines into a single string with newline characters between each line
-    return '\n'.join(box_lines)
 
 
 

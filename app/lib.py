@@ -43,11 +43,15 @@ def train(model, args):
         verbose=args.reduce_lr_verbose
     )
 
+    print_progress_callback = seq2seq.setup_print_progress_callback(
+        args.batch_size, args.sample_size, LOG_FLAG, True)
+
     callbacks = [
         checkpoint_callback,
         early_stopping_callback,
         tensorboard_callback,
-        reduce_lr_callback
+        reduce_lr_callback,
+        print_progress_callback
     ]
 
     train_data_filepaths = []
