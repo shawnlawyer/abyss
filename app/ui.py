@@ -23,6 +23,11 @@ class UI:
         self.app_title = ""
         self.state = AppState()
 
+    def unpack_box_style(self, box_string):
+        if len(box_string) != 6:
+            raise ValueError('box_string must be 6 characters long')
+        return tuple(box_string)
+
     def json_to_report(self, json_str):
         data = json.loads(json_str)
         lines = []
@@ -43,7 +48,7 @@ class UI:
 
     def draw_form(self, fields, x=0, y=0, max_width=None, header=None, style=BOX_1):
         console_width = self.term.width
-        top_left, top_right, bottom_left, bottom_right, horizontal, vertical = unpack_box_style(style)
+        top_left, top_right, bottom_left, bottom_right, horizontal, vertical = self.unpack_box_style(style)
         if max_width == None:
             max_width = min(max(len(field['prompt'] + field['response']) + 4 for field in fields), console_width - 4)
 
@@ -131,7 +136,7 @@ class UI:
                 self.draw_form(fields, x, y, width, header, style)
 
     def draw_box(self, header, text, width, height, x=1, y=1, style=BOX_1):
-        top_left, top_right, bottom_left, bottom_right, horizontal, vertical = unpack_box_style(style)
+        top_left, top_right, bottom_left, bottom_right, horizontal, vertical = self.unpack_box_style(style)
 
         # Initialize an empty list to store each line of the box
         # Draw top border
@@ -172,7 +177,7 @@ class UI:
         selections = [0] * len(menus_list)
         console_width = self.term.width
 
-        top_left, top_right, bottom_left, bottom_right, horizontal, vertical = unpack_box_style(style)
+        top_left, top_right, bottom_left, bottom_right, horizontal, vertical = self.unpack_box_style(style)
 
         active_menu = 0  # keep track of the active menu
 

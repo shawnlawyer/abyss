@@ -127,3 +127,5 @@ SETTINGS_VALIDATORS = {
     "datasets": lambda s: set(s.replace(" ", "").split(',')) <= set(['cmc', 'persona_chat']),
 }
 LOG_FLAG = "Abyss_Log:"
+
+BOX_1 = '╔╗╚╝═║'

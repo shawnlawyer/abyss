@@ -230,13 +230,6 @@ class GUI(UI):
         save_config(self.state.configs, config_filepath)
         self.state.active_screen = 'main_menu'
 
-BOX_1 = '╔╗╚╝═║'
-
-def unpack_box_style(box_string):
-    if len(box_string) != 6:
-        raise ValueError('box_string must be 6 characters long')
-    return tuple(box_string)
-
 def parse_eta_line(line):
     pattern = r"(\d+)/(\d+)\s+\[=*>\.*\]*\s+-\s+ETA:\s+(.{0,10})\s+-\s+loss:\s+([\d\.]+)\s+-\s+accuracy:\s+([\d\.]+\s+)"
 
