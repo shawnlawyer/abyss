@@ -54,7 +54,6 @@ def main(**kwargs):
         cli.main(args)
     else:
         gui = GUI()
-        gui.main()
 
 if __name__ == "__main__":
     make_system_directories()

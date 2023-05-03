@@ -2,26 +2,44 @@ from const import *
 from blessed import Terminal
 import time
 import json
+import threading
+import subprocess
+from time import sleep
+
 BOX_1 = '╔╗╚╝═║'
-
-def unpack_box_style(box_string):
-    if len(box_string) != 6:
-        raise ValueError('box_string must be 6 characters long')
-    return tuple(box_string)
-
 class AppState:
+    def update(self, new_dict):
+        for key, value in new_dict.items():
+            setattr(self, key, value)
     def __init__(self):
         self.selection = None
         self.configs = None
         self.config_file = None
         self.active_screen = None
 
-class UI:
 
+class UI():
+
+    menus = {}
+    timer_thread = None
+    timer_interval = 1 # Update the screen every 1 second
     def __init__(self):
         self.term = Terminal()
         self.app_title = ""
         self.state = AppState()
+
+
+    def timer_loop(self):
+        while True:
+            with self.term.fullscreen(), self.term.cbreak(), self.term.hidden_cursor():
+                self.draw_screen()
+                time.sleep(self.timer_interval)
+    def draw_screen(self):
+        with self.term.fullscreen(), self.term.cbreak(), self.term.hidden_cursor():
+            self.draw_layout()
+
+    def draw_layout(self):
+        print(self.term.home() + self.term.clear())
 
     def unpack_box_style(self, box_string):
         if len(box_string) != 6:
@@ -55,6 +73,8 @@ class UI:
             if header:
                 max_width = min(max(max_width, len(header)), console_width - 4)  # adjust for header length
 
+
+        print(self.term.home())
         with self.term.location(x, y):
             # Top border
             if header:
@@ -85,6 +105,8 @@ class UI:
 
     def form(self, fields, x=0, y=0, width=None, header=None, style=BOX_1):
         current_field = 0
+
+        print(self.term.home())
         with self.term.cbreak(), self.term.hidden_cursor():
             def form_key_handler(key, selected, options_length=None):
                 if key.is_sequence:
@@ -132,7 +154,6 @@ class UI:
                                 print(f"No converter found for key {key}. Keeping value as is.")
                                 converted_dict[key] = value
                         return converted_dict
-                print(self.term.home + self.term.clear)
                 self.draw_form(fields, x, y, width, header, style)
 
     def draw_box(self, header, text, width, height, x=1, y=1, style=BOX_1):
@@ -140,6 +161,8 @@ class UI:
 
         # Initialize an empty list to store each line of the box
         # Draw top border
+
+        print(self.term.home())
         with self.term.location(x, y):
             print(top_left + header + horizontal * (width - len(header) - 2) + top_right)
         # Draw text lines
@@ -173,7 +196,7 @@ class UI:
                 quit()
         return (None, selected)
 
-    def menus(self, menus_list, style=BOX_1):
+    def draw_menus(self, menus_list, style=BOX_1):
         selections = [0] * len(menus_list)
         console_width = self.term.width
 
@@ -244,6 +267,24 @@ class UI:
                     selections[active_menu] = selected
                 elif action == 'field_change_selected':
                     selections[menu_id] = selected
+    def draw_current_state_menus(self):
+
+        menus = []
+        handlers = []
+
+        for menu_name, gen_func_name in self.menus.items():
+            gen_func = getattr(self, gen_func_name)
+            menu = gen_func()
+            if menu:
+                menu, handler = menu
+                menus.append(menu)
+                handlers.append(handler)
+
+        menu_id, selection = self.draw_menus(menus)
+        update_dict = handlers[menu_id](selection)
+        if update_dict is not None:
+            self.state.update(update_dict)
+        self.draw_screen()
 
 
 
