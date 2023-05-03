@@ -124,9 +124,9 @@ class GUI(UI):
             print(self.term.home)
             self.draw_box(key, '\n'.join(training_info_report), width, height, x, y)
 
-
     def display_output_thread(self, key, box_width=40, box_height=20):
         threading.Thread(target=self.display_output, args=(key, box_width, box_height)).start()
+
     def draw_layout(self):
         self.term.home()
         self.term.clear()
@@ -184,7 +184,6 @@ class GUI(UI):
             self.do_actions(menus[menu_id]['options_map'][selection])
             self.draw_screen()
 
-
     def choose_project_menu(self):
 
         menus = []
@@ -229,32 +228,6 @@ class GUI(UI):
         self.state.configs.pop('name')
         save_config(self.state.configs, config_filepath)
         self.state.active_screen = 'main_menu'
-
-def parse_eta_line(line):
-    pattern = r"(\d+)/(\d+)\s+\[=*>\.*\]*\s+-\s+ETA:\s+(.{0,10})\s+-\s+loss:\s+([\d\.]+)\s+-\s+accuracy:\s+([\d\.]+\s+)"
-
-    match = re.match(pattern, line)
-
-    if match:
-        current_step, total_steps, eta, loss, accuracy = match.groups()
-        # Convert strings to appropriate types
-        current_step = int(current_step)
-        total_steps = int(total_steps)
-        eta = eta
-        loss = float(loss)
-        accuracy = float(accuracy)
-        # Return as a dictionary
-        return {
-            'current_step': current_step,
-            'total_steps': total_steps,
-            'eta': eta,
-            'loss': loss,
-            'accuracy': accuracy,
-        }
-    else:
-        return None
-def format_eta(progress):
-    return f"Step {progress['current_step']}/{progress['total_steps']}, ETA: {progress['eta']}, Loss: {progress['loss']:.2f}, Acc: {progress['accuracy']:.2f}"
 
 if __name__ == "__main__":
     app = GUI()
