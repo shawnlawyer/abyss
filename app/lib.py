@@ -15,7 +15,7 @@ def build(args):
                           args.learning_rate_decay, args.gradient_clip)
     model.save(join(settings.models_dir, args.model_filename))
     return model
-def train(model, args):
+def train(model, args, callbacks=[]):
     checkpoint_callback = seq2seq.setup_checkpoint_callback(
         join(settings.models_dir, args.model_filename),
         save_weights_only=args.checkpoint_save_weights_only,
@@ -46,13 +46,14 @@ def train(model, args):
     print_progress_callback = seq2seq.setup_print_progress_callback(
         args.batch_size, args.sample_size, LOG_FLAG, True)
 
-    callbacks = [
+    callbacks.extend([
         checkpoint_callback,
         early_stopping_callback,
         tensorboard_callback,
         reduce_lr_callback,
         print_progress_callback
-    ]
+    ])
+
 
     train_data_filepaths = []
     test_data_filepaths = []

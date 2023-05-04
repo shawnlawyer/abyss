@@ -1,17 +1,9 @@
-from os.path import join, basename, exists
-import re
-import json
+from os.path import join, basename
 from glob import glob
-import threading
-from tensorflow.keras.models import load_model
 from util import DataObject
-import seq2seq
 from const import *
 from lib import save_config, load_config
-from os.path import join
-import subprocess
 from ui import UI
-from time import sleep
 settings = DataObject(SETTINGS)
 defaults = DataObject(DEFAULTS)
 
@@ -59,31 +51,15 @@ class ThreadedSubprocessMixin:
     def display_output(self, key, width, height):
         if len(self.proc_outputs[key]) == 0:
             return
-    def capsture_output(self, key, log_flag=None):
+    def capture_output(self, key, log_flag=LOG_FLAG):
         while True:
-            sleep(1)
             output = self.procs[key].stdout.readline().decode().strip()
 
             if output == '' and self.procs[key].poll() is not None:
                 continue
             if self.log_flag in output:
-                self.proc_outputs[key].append(output.replace(self.log_flag, ''))
-    def capture_output(self, key):
-        while True:
+                self.proc_outputs[key] = output.replace(log_flag,'')
 
-            output = self.procs[key].stdout.readline().decode().strip()
-            if output == '' and self.procs[key].poll() is not None:
-                continue
-            if key == 'summary':
-                self.proc_outputs[key].append(output)
-                #self.display_output_thread(key, 40, 20)
-            elif key == 'chat':
-                self.proc_outputs[key].append(output)
-                #self.display_output_thread(key, 40, 20)
-            elif key == 'train':
-                if LOG_FLAG in output:
-                    self.proc_outputs[key] = output.replace(LOG_FLAG,'')
-                    #self.display_output_thread(key, 40, 20)
     def display_output_thread(self, target):
         threading.Thread(target=target).start()
 
@@ -135,8 +111,8 @@ class GUI(UI, ThreadedSubprocessMixin):
             box_height = self.term.height
             width = 40
             height = 8
-            x = (self.term.width // 5) * 3 - 2
-            y = 4
+            x = (self.term.width // 5) * 3 - 3
+            y = 2
 
             self.draw_box('Training Progress', training_info_report, width, height, x, y)
             sleep(1)
@@ -148,8 +124,9 @@ class GUI(UI, ThreadedSubprocessMixin):
             'options_map': ['create_project'],
             'options': [SCREENS['create_project']['label']],
             'header': SCREENS['main_menu']['label'],
+            'width' : 25,
             'x': (self.term.width // 5),
-            'y': 4
+            'y': 2
         }, handler
 
     def generate_choose_project_menu(self):
@@ -164,6 +141,7 @@ class GUI(UI, ThreadedSubprocessMixin):
                 'menu': 'choose_project_menu',
                 'options': project_names,
                 'header': SCREENS['choose_project_menu']['label'],
+                'width' : 25,
                 'x': (self.term.width // 5),
                 'y': 10
             }, handler
@@ -178,8 +156,9 @@ class GUI(UI, ThreadedSubprocessMixin):
                 'options_map': options_map,
                 'options': [SCREENS[value]['label'] for value in ['train_model', 'chat_with_model', 'model_summary']],
                 'header': SCREENS['project_options_menu']['label'],
+                'width' : 25,
                 'x': (self.term.width // 5) * 2,
-                'y': 4
+                'y': 2
             }, handler
         return None
 

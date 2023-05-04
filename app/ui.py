@@ -176,7 +176,7 @@ class UI():
                     print(self.term.move_x(x) + vertical + ' ' * (width - 2) + vertical)  # print empty line
 
         # Draw bottom border
-        with self.term.location(x, y + height + 2):
+        with self.term.location(x, y + height + 1):
             print(self.term.move_x(x) + bottom_left + horizontal * (width - 2) + bottom_right)
 
     def get_key_input(self):

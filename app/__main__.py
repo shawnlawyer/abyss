@@ -1,17 +1,15 @@
-import os
 from os.path import isfile, join
 import click
 from lib import load_config, make_system_directories
 from util import DataObject
 from gui import GUI
-import cli
+from cli import CLI
 from const import DEFAULTS, SETTINGS
 from lang.en import HELP
 
 settings = DataObject(SETTINGS)
 defaults = DataObject(DEFAULTS)
 options_help = DataObject(HELP)
-
 
 @click.command()
 @click.option('--model-filename', help=options_help.model_filename)
@@ -51,7 +49,7 @@ def main(**kwargs):
         for key, value in kwargs.items():
             if value:
                 setattr(args, key, None if value == "None" else value)
-        cli.main(args)
+        CLI(args)
     else:
         gui = GUI()
 
