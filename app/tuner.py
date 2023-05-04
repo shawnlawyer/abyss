@@ -1,7 +1,8 @@
 # Add the following imports at the beginning of your code
-from kerastuner import HyperModel, RandomSearch, Hyperband, BayesianOptimization
+from keras_tuner import HyperModel, RandomSearch, Hyperband, BayesianOptimization
 from seq2seq import build
-# Create a new class extending HyperModel for Keras Tuner
+from util import DataObject
+from lib import setup_training_data
 class ChatbotHyperModel(HyperModel):
     def __init__(self, vocab_size):
         self.vocab_size = vocab_size
@@ -23,6 +24,9 @@ class ChatbotHyperModel(HyperModel):
 def train(tuner, train_data, test_data, epochs, callbacks):
     X_train, y_train = train_data
     X_test, y_test = test_data
+
+    # Add the TunerProgressCallback to the list of callbacks
+    callbacks.append(TunerProgressCallback())
 
     return tuner.search(
         X_train,
@@ -73,21 +77,62 @@ def start_tuner_search(hypermodel, train_data, test_data, epochs, callbacks, tun
 
     return best_hyperparameters, best_model
 
+import json
+import time
+import tensorflow as tf
+
+class TunerProgressCallback(tf.keras.callbacks.Callback):
+    def __init__(self, logs_flag='', as_json=False):
+        self.logs_flag = '\n' + logs_flag
+        self.as_json = as_json
+        self.trial_start_time = time.time()
+
+    def on_trial_begin(self, trial):
+        self.trial_start_time = time.time()
+        if self.as_json:
+            print(self.logs_flag + json.dumps({"event": "trial_begin", "trial": trial.trial_id}))
+        else:
+            print(f"{self.logs_flag}Starting trial {trial.trial_id}")
+
+    def on_trial_end(self, trial):
+        trial_time = time.time() - self.trial_start_time
+        trial_score = trial.score
+        trial_hyperparameters = trial.hyperparameters.values
+
+        if self.as_json:
+            print(self.logs_flag + json.dumps(
+                {"event": "trial_end", "trial": trial.trial_id, "score": trial_score, "hyperparameters": trial_hyperparameters, "trial_time": trial_time}))
+        else:
+            print(f"{self.logs_flag}Trial {trial.trial_id} - score: {trial_score:.4f} - time: {trial_time:.2f}s")
+            print(f"{self.logs_flag}Hyperparameters: {json.dumps(trial_hyperparameters, indent=2)}")
 
 # Modify the main function to use the Keras Tuner
 def main():
-    # ... (keep the data preparation and train-test split code)
+    args = DataObject(
+        {
+            "vocab_size": 256,
+            "datasets": [
+                "cmc",
+                "persona_chat"
+            ],
+            "batch_size" : 64,
+            "sample_size" : 500000,
+            "max_length" : 1024,
+            "randomize_sample" : True
+        }
+    )
+    train_data, test_data = setup_training_data(args)
 
     # Create the ChatbotHyperModel instance
-    hypermodel = ChatbotHyperModel(vocab_size)
+    hypermodel = ChatbotHyperModel(args.vocab_size)
 
     # Train the model using Keras Tuner
     best_hyperparameters, best_model = start_tuner_search(
         hypermodel,
         train_data,
         test_data,
-        epochs,
-        callbacks,
+        epochs =15,
+        callbacks=[],
         tuner_type="random",
         max_trials=10,
         executions_per_trial=1,
@@ -97,7 +142,7 @@ def main():
     )
 
     # Save the best model and print the best hyperparameters
-    best_model.save('best_model.h5')
+    best_model.save('lstm3.h5')
     print("Best hyperparameters found: ", best_hyperparameters)
 
 

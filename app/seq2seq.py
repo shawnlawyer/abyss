@@ -1,3 +1,5 @@
+import time
+import json
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras.models import Model, load_model
@@ -9,10 +11,11 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from util import byte_level_tokenization, byte_level_detokenization
 
 
-# Model building
+
 def build(vocab_size, embedding_size, recurrent_units, recurrent_layers=1, recurrent_type="LSTM", dropout=0.0, recurrent_dropout=0.0, learning_rate=0.001,
           learning_rate_decay=0.0, gradient_clip=None):
     input_layer = Input(shape=(None,))
+
     embedding_layer = Embedding(vocab_size, embedding_size, mask_zero=True)(input_layer)
     if recurrent_type == 'GRU':
         recurrent_layer = GRU(recurrent_units, return_sequences=True, dropout=dropout, recurrent_dropout=recurrent_dropout)
@@ -88,13 +91,6 @@ def setup_reduce_lr_callback(monitor='val_loss', factor=0.1, patience=10, min_lr
 def setup_print_progress_callback(batch_size, sample_size, logs_flag='', as_json=False):
     return PrintProgressCallback(batch_size, sample_size, logs_flag, as_json)
 
-
-import time
-
-import time
-import json
-
-
 class PrintProgressCallback(tf.keras.callbacks.Callback):
     def __init__(self, batch_size, sample_size, logs_flag='', as_json=False):
         self.batch_size = batch_size
@@ -116,7 +112,7 @@ class PrintProgressCallback(tf.keras.callbacks.Callback):
         batch_loss = logs["loss"]
         batch_acc = logs.get("accuracy")
         batch_lr = self.model.optimizer.lr.numpy().item()
-        processed_samples = (batch + 1) * (self.batch_size // self.sample_size)
+        processed_samples = (batch + 1) * (self.sample_size // self.batch_size)
         if self.as_json:
             print(self.logs_flag + json.dumps(
                 {"event": "batch_end", "batch": batch + 1, "batch_size": self.batch_size, "loss": batch_loss,
@@ -201,8 +197,6 @@ class CaptureProgressCallback(tf.keras.callbacks.Callback):
             self.callback(output)
             output = f"{self.logs_flag}Total number of parameters: {self.model.count_params()}"
             self.callback(output)
-
-
 
 # Saving and loading the model
 def save(model, filepath):

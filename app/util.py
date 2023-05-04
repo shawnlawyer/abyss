@@ -1,8 +1,7 @@
 import os
+import random
 import numpy as np
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-import random
-
 
 class DataObject:
     def __init__(self, dictionary):
@@ -21,7 +20,7 @@ def load_data_from_file(file_name):
     return data
 
 def byte_level_tokenization(text):
-    return [float(ord(c)) for c in text]
+    return [ord(c) for c in text]
 
 def byte_level_detokenization(tokens):
     return "".join([chr(int(c)) for c in tokens])

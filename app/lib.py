@@ -16,6 +16,19 @@ def build(args):
     model.save(join(settings.models_dir, args.model_filename))
     return model
 def train(model, args, callbacks=[]):
+
+    callbacks.extend(setup_training_callbacks(args))
+    train_data, test_data = setup_training_data(args)
+    history = seq2seq.train(model,
+                            args.batch_size,
+                            args.epochs,
+                            train_data,
+                            test_data,
+                            callbacks)
+
+    seq2seq.save(model, join(settings.models_dir, args.model_filename))
+
+def setup_training_callbacks(args, callbacks=[]):
     checkpoint_callback = seq2seq.setup_checkpoint_callback(
         join(settings.models_dir, args.model_filename),
         save_weights_only=args.checkpoint_save_weights_only,
@@ -54,6 +67,9 @@ def train(model, args, callbacks=[]):
         print_progress_callback
     ])
 
+    return callbacks
+
+def setup_training_data(args):
 
     train_data_filepaths = []
     test_data_filepaths = []
@@ -61,14 +77,12 @@ def train(model, args, callbacks=[]):
         train_data_filepaths.append(join(settings.datasets_dir, dataset, settings.train_data_filename))
         test_data_filepaths.append(join(settings.datasets_dir, dataset, settings.test_data_filename))
 
-    history = seq2seq.train(model,
-                            args.batch_size,
-                            args.epochs,
-                            load_and_preprocess_multiple_data_files(train_data_filepaths, args.max_length, args.sample_size, args.randomize_sample),
-                            load_and_preprocess_multiple_data_files(test_data_filepaths, args.max_length, args.sample_size, args.randomize_sample),
-                            callbacks)
+    train_data = load_and_preprocess_multiple_data_files(train_data_filepaths, args.max_length, args.sample_size,
+                                            args.randomize_sample)
+    test_data = load_and_preprocess_multiple_data_files(test_data_filepaths, args.max_length, args.sample_size,
+                                            args.randomize_sample)
 
-    seq2seq.save(model, join(settings.models_dir, args.model_filename))
+    return train_data, test_data
 
 def save_config(config, filename)   :
     with open(filename, "w") as outfile:
