@@ -4,7 +4,6 @@ import json
 from util import DataObject, load_and_preprocess_multiple_data_files
 import seq2seq
 from const import *
-from lang.en import CONFIG_FORM_LABELS
 
 settings = DataObject(SETTINGS)
 defaults = DataObject(DEFAULTS)

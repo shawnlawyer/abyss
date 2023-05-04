@@ -1,5 +1,6 @@
 
 
+#!# Change this to Application Settings Defaults
 SETTINGS = {
     "configs_dir": "configs",
     "logs_dir": "logs",
@@ -11,6 +12,7 @@ SETTINGS = {
     "datasets": ['cmc', 'persona_chat']
 }
 
+#!# Change this to Project Settings Defaults
 DEFAULTS = {
     "model_filename": "abyss.h5",
     "datasets": ['cmc', 'persona_chat'],
@@ -51,6 +53,7 @@ def is_float(s):
         return True
     except ValueError:
         return False
+#!# Change this to Project Settings Validators
 VALIDATORS = {
     "model_filename": lambda s: s.endswith('.h5'),
     "datasets": lambda s: set(s.replace(" ", "").split(',')) <= set(['cmc', 'persona_chat']),
@@ -83,6 +86,7 @@ VALIDATORS = {
     "reduce_lr_min_lr": lambda s: is_float(s) and float(s) >= 0,
     "reduce_lr_verbose": lambda s: s.lower() in ['true', 'false'],
 }
+#!# Change this to Project Settings Converters
 CONVERTERS = {
     "model_filename": str,  # Keep as string
     "datasets": lambda s: s.replace(" ", "").split(','),
@@ -115,7 +119,7 @@ CONVERTERS = {
     "reduce_lr_min_lr": float,
     "reduce_lr_verbose": lambda s: s.lower() == 'true',
 }
-
+#!# change this to application settings validators
 SETTINGS_VALIDATORS = {
     "configs_dir": lambda s: s.isalpha(),
     "logs_dir": lambda s: s.isalpha(),
@@ -126,6 +130,66 @@ SETTINGS_VALIDATORS = {
     "recurrent_types": lambda s: set(s.replace(" ", "").split(',')) <= set(['LSTM', 'GRU']),
     "datasets": lambda s: set(s.replace(" ", "").split(',')) <= set(['cmc', 'persona_chat']),
 }
+TUNING_SETTINGS_DEFAULTS  = {
+    'hypermodel': None,
+    'train_data': None,
+    'test_data': None,
+    'epochs': 15,
+    'callbacks': [],
+    'tuner_type': 'random',
+    'max_trials': 10,
+    'executions_per_trial': 1,
+    'tuner_directory': 'tuner',
+    'project_name': 'chatbot',
+    'seed': 42,
+    'objective': 'val_loss',
+    'overwrite': False
+}
+TUNING_SETTINGS_VALIDATORS = {
+    "hypermodel": lambda s: isinstance(s, str),
+    "train_data": lambda s: isinstance(s, str),
+    "test_data": lambda s: isinstance(s, str),
+    "epochs": lambda s: s.isdigit(),
+    "callbacks": lambda s: isinstance(s, list),
+    "tuner_type": lambda s: s.lower() in ['random', 'bayesian', 'hyperband'],
+    "max_trials": lambda s: s.isdigit(),
+    "executions_per_trial": lambda s: s.isdigit(),
+    "tuner_directory": lambda s: isinstance(s, str),
+    "project_name": lambda s: isinstance(s, str),
+    "seed": lambda s: s.isdigit(),
+    "objective": lambda s: isinstance(s, str),
+    "overwrite": lambda s: s.lower() in ['true', 'false']
+}
+
+TUNING_SETTING_CONVERTERS = {
+    "hypermodel": str,  # Keep as string
+    "train_data": str,  # Keep as string
+    "test_data": str,  # Keep as string
+    "epochs": int,
+    "callbacks": lambda s: s,  # Keep as is (list)
+    "tuner_type": str,  # Keep as string
+    "max_trials": int,
+    "executions_per_trial": int,
+    "tuner_directory": str,  # Keep as string
+    "project_name": str,  # Keep as string
+    "seed": int,
+    "objective": str,  # Keep as string
+    "overwrite": lambda s: s.lower() == 'true',
+}
+
+
+TUNING_SETTINGS_FORM_FIELDS  = {
+    'epochs': 15,
+    'tuner_type': 'random',
+    'max_trials': 10,
+    'executions_per_trial': 1,
+    'tuner_directory': 'tuner',
+    'project_name': 'chatbot',
+    'seed': 42,
+    'objective': 'val_loss',
+    'overwrite': False
+}
+
 LOG_FLAG = "Abyss_Log:"
 
 BOX_1 = '╔╗╚╝═║'
