@@ -225,6 +225,7 @@ threads = {
     "draw_training_progress_report":{"target":"draw_training_progress_report"},
     "draw_screen":{"target":"draw_screen"},
     "draw_screen_state":{"target":"draw_screen_state"},
+    "draw_screen_buffer":{"target":"draw_screen_buffer"},
     "train":{"command":['python', 'app', '--config', '{config_file}', '--train']},
 }
 
@@ -234,3 +235,4 @@ MENUS = {
     'project_actions_menu': 'generate_project_actions_menu'
 }
 APP_TITLE = "Abyss"
+REFRESH_RATE = 0.15

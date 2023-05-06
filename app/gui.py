@@ -20,11 +20,13 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
         self.app_title = APP_TITLE
         self.menus = MENUS
         self.log_flag = LOG_FLAG
+        self.refresh_rate = REFRESH_RATE
         self.state.active_screen = 'main_menu'
         self.threads = {}
-        self.setup_thread('draw_screen').start()
+        self.setup_thread('draw_screen_buffer').start()
+        self.setup_thread('draw_screen').start()#should be screen buffer controller
 
-    def draw_screen(self, thread=None):
+    def draw_screen(self, thread):
         active_screen = ''
         with self.term.fullscreen(), self.term.cbreak(), self.term.hidden_cursor():
             while True if not thread else not thread.stop_event.is_set():
@@ -32,8 +34,6 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
                     continue
                 else:
                     active_screen = self.state.active_screen
-
-                self.reset_screen()
 
                 if self.state.active_screen == 'create_project':
                     self.create_project_config_form()
@@ -45,13 +45,12 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
                 if 'draw_menus' not in self.threads:
                     self.setup_thread('draw_menus').start()
 
+                sleep(self.refresh_rate)
 
-    def redraw_screen(self):
-        if 'draw_screen' in self.threads:
-            self.threads['draw_screen'].stop()
-            self.setup_thread('draw_screen').start()
-        else:
-            self.draw_screen()
+    def draw_screen_buffer(self, thread):
+        while not thread.stop_event.is_set():
+            self.term.print_buffer()
+            sleep(self.refresh_rate)
 
     def draw_training_progress_report(self, thread=None):
         status = loading()
@@ -66,10 +65,10 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
             width = 50
             height = 8
             x = 75
-            y = 0
+            y = 1
 
             self.draw_box('Training Progress', training_info_report, width, height, x, y)
-            sleep(1)
+            sleep(self.refresh_rate)
 
     def setup_thread(self, key):
         if 'target' in threads.get(key):
@@ -100,12 +99,5 @@ def loading(loading=''):
     return loading
 
 if __name__ == "__main__":
-    key='train'
-    state = {"config_file":"lstm3.json"}
-    command = [arg.format(**state) for arg in threads[key]['command']]
-    thread = ThreadedSubprocess(command, LOG_FLAG)
-    thread.start()
-    while True:
-        print(thread.output)
-        sleep(1)
+    pass
 
