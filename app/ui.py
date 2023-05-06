@@ -96,7 +96,7 @@ class UI():
                 text += self.term.red(f'  Invalid input for field "{field["prompt"]}"!')
 
             line = vertical + ' ' + text + ' ' + vertical
-            lines.append()
+            lines.append(line)
 
         height = len(lines)
 
