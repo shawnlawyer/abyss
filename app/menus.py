@@ -13,7 +13,8 @@ class Menus():
     state = []
     def generate_main_menu(self):
         if self.state.active_screen != 'main_menu':
-            handler = lambda selection: {'active_screen': [selection]}
+            options_map = ['main_menu']
+            handler = lambda selection: {'active_screen': options_map[selection]}
             return {
                 'menu': 'main_menu',
                 'options_map': ['main_menu'],
@@ -24,7 +25,8 @@ class Menus():
                 'y': 4
             }, handler
 
-        handler = lambda selection: {'active_screen': [selection]}
+        options_map = ['create_project']
+        handler = lambda selection: {'active_screen': options_map[selection]}
         return {
             'menu': 'main_menu',
             'options_map': ['create_project'],
@@ -53,21 +55,21 @@ class Menus():
             return {
                 'menu': 'choose_project_menu',
                 'options': project_names,
-                'header': SCREENS['choose_project_menu']['label'],
+                'header': MENUS['choose_project_menu']['label'],
                 'width' : 25,
                 'x': self.term.width // 2 - 25 // 2,
                 'y': 8
             }, handler
 
-    def generate_project_actions_menu(self):
+    def generate_project_options_menu(self):
         if self.state.configs and self.state.config_file:
             options_map = ['train', 'chat', 'model']
-            handler = lambda selection: self.do_actions(options_map[selection])
+            handler = lambda selection: self.options_selection_hander(options_map[selection])
             return {
                 'menu': 'project_actions_menu',
                 'options_map': options_map,
-                'options': [SCREENS[value]['label'] for value in ['train_model', 'chat_with_model', 'model_summary']],
-                'header': SCREENS['project_options_menu']['label'],
+                'options': [ACTIONS[value]['label'] for value in ACTIONS],
+                'header': MENUS['project_options_menu']['label'],
                 'width' : 25,
                 'x': self.term.width // 2 - 25 // 2,
                 'y': 8

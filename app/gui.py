@@ -19,13 +19,18 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
         self.menus = MENUS
         self.log_flag = LOG_FLAG
         self.refresh_rate = REFRESH_RATE
+        self.debug_pause_rate = DEBUG_PAUSE_RATE
         self.state.active_screen = 'main_menu'
         self.threads = {}
-        self.setup_thread('draw_screen_buffer').start()
-        self.setup_thread('screen_buffer_controller').start()
+        for key in THREADS:
+            self.setup_thread(key)
+
+        self.threads['draw_screen_buffer'].start()
+        self.threads['screen_buffer_controller'].start()
 
     def screen_buffer_controller(self, thread):
         active_screen = ''
+        show_menus = True # this is a bit of a hack for now but
         with self.term.fullscreen(), self.term.cbreak(), self.term.hidden_cursor():
             while True if not thread else not thread.stop_event.is_set():
                 if active_screen == self.state.active_screen:
@@ -34,19 +39,22 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
                     active_screen = self.state.active_screen
 
                 if self.state.active_screen == 'create_project':
-                    self.create_project_config_form()
-                elif 'train' in self.threads:
 
-                    if 'train' in self.threads and 'draw_training_progress_report' not in self.threads:
+                    self.create_project_config_form()
+
+                if self.state.active_screen == 'project_details':
+                    if 'train' in self.threads['train'] and 'draw_training_progress_report' not in self.threads:
                         self.setup_thread('draw_training_progress_report').start()
 
-                if 'menus_controller' not in self.threads:
+                if self.threads['menus_controller'].can_start():
                     self.setup_thread('menus_controller').start()
 
                 sleep(self.refresh_rate)
 
     def draw_screen_buffer(self, thread):
         while not thread.stop_event.is_set():
+            if self.debug_pause_rate > 0:
+                sleep(self.debug_pause_rate)
             self.term.print_buffer()
             sleep(self.refresh_rate)
 
@@ -69,22 +77,16 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
             sleep(self.refresh_rate)
 
     def setup_thread(self, key):
-        if 'target' in threads.get(key):
-            target = getattr(self, threads[key]['target'])
+
+        if 'target' in THREADS.get(key):
+            target = getattr(self, THREADS[key]['target'])
             self.threads[key] = StoppableThread(target)
         else:
-
-            command = [arg.format(**self.state) for arg in threads[key]['command']]
+            command = [arg.format(**self.state) for arg in THREADS[key]['command']]
             self.threads[key] = ThreadedSubprocess(command, self.log_flag)
+
         return self.threads[key]
 
-    def do_actions(self, key):
-        if key in self.threads and self.threads[key].process.poll() is not None:
-            return
-
-        self.setup_thread(key).start()
-        if 'callback' in ACTIONS[key]:
-            self.setup_thread(ACTIONS[key]['callback']).start()
 def loading(loading=''):
     if loading == '...':
         return ''

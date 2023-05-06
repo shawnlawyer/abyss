@@ -130,6 +130,7 @@ SETTINGS_VALIDATORS = {
     "recurrent_types": lambda s: set(s.replace(" ", "").split(',')) <= set(['LSTM', 'GRU']),
     "datasets": lambda s: set(s.replace(" ", "").split(',')) <= set(['cmc', 'persona_chat']),
 }
+
 TUNING_SETTINGS_DEFAULTS  = {
     'hypermodel': None,
     'train_data': None,
@@ -196,31 +197,20 @@ BOX_1 = '╔╗╚╝═║'
 
 
 SCREENS = {
-    'main_menu': {'label': 'Main Menu'},
+    'main_menu': {'label': 'Abyss Terminal'},
     'create_project': {'label': 'Create New Project'},
-    'load_project': {'label': 'Load Project'},
-    'project_options_menu': {'label': 'Project Options'},
-    'choose_project_menu': {'label': 'Choose Project'},
-    'train_model': {'label': 'Train Model'},
-    'chat_with_model': {'label': 'Chat With Model'},
-    'model_summary': {'label': 'Model Summary'}
+    'project_details': {'label': 'Project Details'}
 }
+
 ACTIONS = {
-    'summary': {
-        'sub_proc': ['python', 'app', '--config', '{config_file}', '--summary', '--no-gpu'],
-        'callback': 'draw_training_progress_report'
-    },
-    'chat': {
-        'sub_proc': ['python', 'app', '--config', '{config_file}', '--chat', '--no-gpu'],
-        'callback': 'draw_training_progress_report'
-    },
     'train': {
+        'label': 'Train Model',
         'sub_proc': ['python', 'app', '--config', '{config_file}', '--train'],
         'callback': 'draw_training_progress_report'
     },
 }
 
-threads = {
+THREADS = {
     "menus_controller":{"target":"menus_controller"},
     "draw_training_progress_report":{"target":"draw_training_progress_report"},
     "screen_buffer_controller":{"target":"screen_buffer_controller"},
@@ -229,10 +219,15 @@ threads = {
 }
 
 MENUS = {
-    'main_menu': 'generate_main_menu',
-    'choose_project_menu': 'generate_choose_project_menu',
-    'project_actions_menu': 'generate_project_actions_menu'
+    'main_menu': {'label':'Options','source':'generate_main_menu'},
+    'choose_project_menu': {'label':'Projects','source':'generate_choose_project_menu'},
+    'project_options_menu': {'label':'Project Options','source':'generate_project_options_menu'}
 }
+
+FORMS = {
+    'create_project_config_form': 'create_project_config_form',
+}
+
 APP_TITLE = "Abyss"
-DEBUG_PAUSE_RATE = 0.15
+DEBUG_PAUSE_RATE = 0
 REFRESH_RATE = 0.15

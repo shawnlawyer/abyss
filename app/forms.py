@@ -26,7 +26,7 @@ class Forms():
         ]
 
         fields.extend(self.form_fields(DEFAULTS, DEFAULTS_LABELS, VALIDATORS))
-        self.state.configs = self.form(fields, (self.term.width // 2)-40, 2, 80, SCREENS['create_project']['label'])
+        self.state.configs = self.form(fields, (self.term.width // 2)-40, 2, 60, SCREENS['create_project']['label'])
         self.state.config_file = self.state.configs['name'] + '.json'
         config_filepath = join(settings.configs_dir, self.state.config_file)
         self.state.configs.pop('name')
