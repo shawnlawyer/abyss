@@ -223,8 +223,7 @@ ACTIONS = {
 threads = {
     "draw_menus":{"target":"draw_current_state_menus"},
     "draw_training_progress_report":{"target":"draw_training_progress_report"},
-    "draw_screen":{"target":"draw_screen"},
-    "draw_screen_state":{"target":"draw_screen_state"},
+    "screen_buffer_controller":{"target":"screen_buffer_controller"},
     "draw_screen_buffer":{"target":"draw_screen_buffer"},
     "train":{"command":['python', 'app', '--config', '{config_file}', '--train']},
 }

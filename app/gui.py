@@ -22,9 +22,9 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
         self.state.active_screen = 'main_menu'
         self.threads = {}
         self.setup_thread('draw_screen_buffer').start()
-        self.setup_thread('draw_screen').start()#should be screen buffer controller
+        self.setup_thread('screen_buffer_controller').start()
 
-    def draw_screen(self, thread):
+    def screen_buffer_controller(self, thread):
         active_screen = ''
         with self.term.fullscreen(), self.term.cbreak(), self.term.hidden_cursor():
             while True if not thread else not thread.stop_event.is_set():
