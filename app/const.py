@@ -193,3 +193,44 @@ TUNING_SETTINGS_FORM_FIELDS  = {
 LOG_FLAG = "Abyss_Log:"
 
 BOX_1 = '╔╗╚╝═║'
+
+
+SCREENS = {
+    'main_menu': {'label': 'Main Menu'},
+    'create_project': {'label': 'Create New Project'},
+    'load_project': {'label': 'Load Project'},
+    'project_options_menu': {'label': 'Project Options'},
+    'choose_project_menu': {'label': 'Choose Project'},
+    'train_model': {'label': 'Train Model'},
+    'chat_with_model': {'label': 'Chat With Model'},
+    'model_summary': {'label': 'Model Summary'}
+}
+ACTIONS = {
+    'summary': {
+        'sub_proc': ['python', 'app', '--config', '{config_file}', '--summary', '--no-gpu'],
+        'callback': 'draw_training_progress_report'
+    },
+    'chat': {
+        'sub_proc': ['python', 'app', '--config', '{config_file}', '--chat', '--no-gpu'],
+        'callback': 'draw_training_progress_report'
+    },
+    'train': {
+        'sub_proc': ['python', 'app', '--config', '{config_file}', '--train'],
+        'callback': 'draw_training_progress_report'
+    },
+}
+
+threads = {
+    "draw_menus":{"target":"draw_current_state_menus"},
+    "draw_training_progress_report":{"target":"draw_training_progress_report"},
+    "draw_screen":{"target":"draw_screen"},
+    "draw_screen_state":{"target":"draw_screen_state"},
+    "train":{"command":['python', 'app', '--config', '{config_file}', '--train']},
+}
+
+MENUS = {
+    'main_menu': 'generate_main_menu',
+    'choose_project_menu': 'generate_choose_project_menu',
+    'project_actions_menu': 'generate_project_actions_menu'
+}
+APP_TITLE = "Abyss"

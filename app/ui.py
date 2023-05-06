@@ -7,38 +7,35 @@ import subprocess
 from time import sleep
 
 BOX_1 = '╔╗╚╝═║'
-class AppState:
+class AppState(dict):
     def update(self, new_dict):
         for key, value in new_dict.items():
             setattr(self, key, value)
-    def __init__(self):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__dict__ = self
         self.selection = None
         self.configs = None
         self.config_file = None
         self.active_screen = None
 
+    def __getitem__(self, key):
+        return self.__dict__[key]
+
+    def __setitem__(self, key, value):
+        self.__dict__[key] = value
+
 
 class UI():
 
     menus = {}
-    timer_thread = None
-    timer_interval = 1 # Update the screen every 1 second
+    app_title = ""
     def __init__(self):
         self.term = Terminal()
-        self.app_title = ""
         self.state = AppState()
 
-
-    def timer_loop(self):
-        while True:
-            with self.term.fullscreen(), self.term.cbreak(), self.term.hidden_cursor():
-                self.draw_screen()
-                time.sleep(self.timer_interval)
-    def draw_screen(self):
-        with self.term.fullscreen(), self.term.cbreak(), self.term.hidden_cursor():
-            self.draw_layout()
-
-    def draw_layout(self):
+    def reset_screen(self):
         print(self.term.home() + self.term.clear())
 
     def unpack_box_style(self, box_string):
@@ -74,7 +71,7 @@ class UI():
                 max_width = min(max(max_width, len(header)), console_width - 4)  # adjust for header length
 
 
-        print(self.term.home())
+        self.term.home()
         with self.term.location(x, y):
             # Top border
             if header:
@@ -161,8 +158,7 @@ class UI():
 
         # Initialize an empty list to store each line of the box
         # Draw top border
-
-        print(self.term.home())
+        self.term.home()
         with self.term.location(x, y):
             print(top_left + header + horizontal * (width - len(header) - 2) + top_right)
         # Draw text lines
@@ -177,7 +173,7 @@ class UI():
 
         # Draw bottom border
         with self.term.location(x, y + height + 1):
-            print(self.term.move_x(x) + bottom_left + horizontal * (width - 2) + bottom_right)
+            print(bottom_left + horizontal * (width - 2) + bottom_right)
 
     def get_key_input(self):
         return self.term.inkey(timeout=0.1)  # Lower timeout for smoother blinking.
@@ -244,21 +240,22 @@ class UI():
                 if header:
                     max_width = min(max(max_width, len(header)), console_width - 4)  # adjust for header length
 
+                self.term.home()
                 with self.term.location(x, y):
                     # Top border
                     if header:
                         text = header.ljust(max_width - 1, horizontal)
-                        print(self.term.move_x(x) + top_left + horizontal + text + top_right)
+                        print(top_left + horizontal + text + top_right)
                     else:
-                        print(self.term.move_x(x) + top_left + horizontal * max_width + top_right)
+                        print(top_left + horizontal * max_width + top_right)
 
                     for i, option in enumerate(options):
                         text = option[:max_width - 2] + '... ' if len(option) > max_width - 2 else option.ljust(
                             max_width - 2)
                         line = self.term.on_black(self.term.white(text)) if i == selected else text
-                        print(self.term.move_x(x, i + 1) + vertical + ' ' + line + ' ' + vertical)
+                        print(vertical + ' ' + line + ' ' + vertical)
                         # Bottom border
-                    print(self.term.move_x(x) + bottom_left + horizontal * max_width + bottom_right)
+                    print(bottom_left + horizontal * max_width + bottom_right)
 
                 action, selected = self.handle_key_input(selected, len(options), custom_handlers=custom_handlers)
                 if action == 'enter':
@@ -267,16 +264,15 @@ class UI():
                     selections[active_menu] = selected
                 elif action == 'field_change_selected':
                     selections[menu_id] = selected
-    def draw_current_state_menus(self):
+    def draw_current_state_menus(self, thread=None): #should be menus controller
 
         menus = []
         handlers = []
 
         for menu_name, gen_func_name in self.menus.items():
             gen_func = getattr(self, gen_func_name)
-            menu = gen_func()
+            menu, handler = gen_func()
             if menu:
-                menu, handler = menu
                 menus.append(menu)
                 handlers.append(handler)
 
@@ -284,7 +280,7 @@ class UI():
         update_dict = handlers[menu_id](selection)
         if update_dict is not None:
             self.state.update(update_dict)
-        self.draw_screen()
+        self.redraw_screen()
 
 
 

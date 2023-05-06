@@ -34,3 +34,5 @@ HELP = {
     'transfer_weights': 'Path to the pre-trained model to transfer weights from.',
     'model_actions_menu': ''
 }
+
+APP_TITLE = "Abyss"

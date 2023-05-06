@@ -1,74 +1,18 @@
-from os.path import join, basename
-from glob import glob
-from util import DataObject
-from const import *
-from lib import save_config, load_config
-from ui import UI
-settings = DataObject(SETTINGS)
-defaults = DataObject(DEFAULTS)
-
-SCREENS = {
-    'main_menu': {'label': 'Main Menu'},
-    'create_project': {'label': 'Create New Project'},
-    'load_project': {'label': 'Load Project'},
-    'project_options_menu': {'label': 'Project Options'},
-    'choose_project_menu': {'label': 'Choose Project'},
-    'train_model': {'label': 'Train Model'},
-    'chat_with_model': {'label': 'Chat With Model'},
-    'model_summary': {'label': 'Model Summary'}
-}
-ACTIONS = {
-    'summary': {
-        'sub_proc': ['python', 'app', '--config', '{config_file}', '--summary', '--no-gpu'],
-        'callback': 'display_output'
-    },
-    'chat': {
-        'sub_proc': ['python', 'app', '--config', '{config_file}', '--chat', '--no-gpu'],
-        'callback': 'display_output'
-    },
-    'train': {
-        'sub_proc': ['python', 'app', '--config', '{config_file}', '--train'],
-        'callback': 'draw_training_progress_report'
-    },
-}
-
-MENUS = {
-    'main_menu': 'generate_main_menu',
-    'choose_project_menu': 'generate_choose_project_menu',
-    'project_actions_menu': 'generate_project_actions_menu'
-}
-APP_TITLE = "Abyss"
 import threading
 import subprocess
 from time import sleep
+from util import DataObject
+from const import *
+from ui import UI
+from threads import StoppableThread, ThreadedSubprocess
+from menus import Menus, MENUS
+from forms import Forms
+from lang.en import *
 
-class ThreadedSubprocessMixin:
-    log_flag = LOG_FLAG
-    procs = {}
-    proc_outputs = {}
-    proc_progress = {}
+settings = DataObject(SETTINGS)
+defaults = DataObject(DEFAULTS)
 
-    def display_output(self, key, width, height):
-        if len(self.proc_outputs[key]) == 0:
-            return
-    def capture_output(self, key, log_flag=LOG_FLAG):
-        while True:
-            output = self.procs[key].stdout.readline().decode().strip()
-
-            if output == '' and self.procs[key].poll() is not None:
-                continue
-            if self.log_flag in output:
-                self.proc_outputs[key] = output.replace(log_flag,'')
-
-    def display_output_thread(self, target):
-        threading.Thread(target=target).start()
-
-    def run_subprocess(self, key, cmd):
-        self.procs[key] = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        self.proc_outputs[key] = '{}'
-        threading.Thread(target=self.capture_output, args=(key,)).start()
-
-class GUI(UI, ThreadedSubprocessMixin):
+class GUI(UI, Menus, Forms, ThreadedSubprocess,):
     # Your GUI class code...
 
     def __init__(self):
@@ -76,125 +20,92 @@ class GUI(UI, ThreadedSubprocessMixin):
         self.app_title = APP_TITLE
         self.menus = MENUS
         self.log_flag = LOG_FLAG
-        self.timer_thread = threading.Thread(target=self.timer_loop)
-        self.timer_thread.start()
+        self.state.active_screen = 'main_menu'
+        self.threads = {}
+        self.setup_thread('draw_screen').start()
 
-    def draw_screen(self):
-        self.draw_layout()
+    def draw_screen(self, thread=None):
+        active_screen = ''
+        with self.term.fullscreen(), self.term.cbreak(), self.term.hidden_cursor():
+            while True if not thread else not thread.stop_event.is_set():
+                if active_screen == self.state.active_screen:
+                    continue
+                else:
+                    active_screen = self.state.active_screen
 
-        # Print the boxes
-        if self.state.active_screen in [None, 'main_menu']:
-            self.draw_current_state_menus()
-        if self.state.active_screen == 'create_project':
-            self.create_project_config_form()
+                self.reset_screen()
 
-    def display_output(self, key):
-        if key == 'train':
-            self.draw_training_progress_report()
-    def draw_training_progress_report(self):
-        loading = ''
-        while True:
-            if loading == '':
-                loading = '.'
-            elif loading == '.':
-                loading = '..'
-            elif loading == '..':
-                loading = '...'
+                if self.state.active_screen == 'create_project':
+                    self.create_project_config_form()
+                elif 'train' in self.threads:
+
+                    if 'train' in self.threads and 'draw_training_progress_report' not in self.threads:
+                        self.setup_thread('draw_training_progress_report').start()
+
+                if 'draw_menus' not in self.threads:
+                    self.setup_thread('draw_menus').start()
+
+
+    def redraw_screen(self):
+        if 'draw_screen' in self.threads:
+            self.threads['draw_screen'].stop()
+            self.setup_thread('draw_screen').start()
+        else:
+            self.draw_screen()
+
+    def draw_training_progress_report(self, thread=None):
+        status = loading()
+        while True if not thread else not thread.stop_event.is_set():
+            status = loading(status)
+            if self.threads['train'].output is None:
+                training_info_report = f"Loading Model:{self.state.configs.model_filename}\nOne Moment{status}"
             else:
-                loading = ''
-            if len(self.proc_outputs['train']) == 0:
-                training_info_report = f"Loading Model:{self.state.configs.model_filename}\nOne Moment{loading}"
-            else:
-                training_info_data = self.proc_outputs['train']
+                training_info_data = self.threads['train'].output
                 training_info_report = '\n'.join(self.json_to_report(training_info_data))
 
-            box_height = self.term.height
-            width = 40
+            width = 50
             height = 8
-            x = (self.term.width // 5) * 3 - 3
-            y = 2
+            x = 75
+            y = 0
 
             self.draw_box('Training Progress', training_info_report, width, height, x, y)
             sleep(1)
 
-    def generate_main_menu(self):
-        handler = lambda selection: {'active_screen': ['create_project'][selection]}
-        return {
-            'menu': 'main_menu',
-            'options_map': ['create_project'],
-            'options': [SCREENS['create_project']['label']],
-            'header': SCREENS['main_menu']['label'],
-            'width' : 25,
-            'x': (self.term.width // 5),
-            'y': 2
-        }, handler
+    def setup_thread(self, key):
+        if 'target' in threads.get(key):
+            target = getattr(self, threads[key]['target'])
+            self.threads[key] = StoppableThread(target)
+        else:
 
-    def generate_choose_project_menu(self):
-        config_files = glob(f"{settings.configs_dir}/*.json")
-        if config_files:
-            project_names = [basename(config_file) for config_file in config_files]
-            handler = lambda selection: {
-                'config_file': project_names[selection],
-                'configs': DataObject(load_config(join(settings.configs_dir, project_names[selection])))
-            }
-            return {
-                'menu': 'choose_project_menu',
-                'options': project_names,
-                'header': SCREENS['choose_project_menu']['label'],
-                'width' : 25,
-                'x': (self.term.width // 5),
-                'y': 10
-            }, handler
-        return None
-
-    def generate_project_actions_menu(self):
-        if self.state.configs and self.state.config_file:
-            options_map = ['train', 'chat', 'model']
-            handler = lambda selection: self.do_actions(options_map[selection])
-            return {
-                'menu': 'project_actions_menu',
-                'options_map': options_map,
-                'options': [SCREENS[value]['label'] for value in ['train_model', 'chat_with_model', 'model_summary']],
-                'header': SCREENS['project_options_menu']['label'],
-                'width' : 25,
-                'x': (self.term.width // 5) * 2,
-                'y': 2
-            }, handler
-        return None
+            command = [arg.format(**self.state) for arg in threads[key]['command']]
+            self.threads[key] = ThreadedSubprocess(command, self.log_flag)
+        return self.threads[key]
 
     def do_actions(self, key):
-        if key in self.procs:
+        if key in self.threads and self.threads[key].process.poll() is not None:
             return
 
-        command = [arg.format(config_file=self.state.config_file) for arg in ACTIONS[key]['sub_proc']]
-        self.run_subprocess(key, command)
+        self.setup_thread(key).start()
         if 'callback' in ACTIONS[key]:
-            gen_func = getattr(self, ACTIONS[key]['callback'])
-            self.display_output_thread(gen_func)
+            self.setup_thread(ACTIONS[key]['callback']).start()
+def loading(loading=''):
+    if loading == '':
+        loading = '.'
+    elif loading == '.':
+        loading = '..'
+    elif loading == '..':
+        loading = '...'
+    else:
+        loading = ''
+    return loading
 
+if __name__ == "__main__":
+    key='train'
+    state = {"config_file":"lstm3.json"}
+    command = [arg.format(**state) for arg in threads[key]['command']]
+    thread = ThreadedSubprocess(command, LOG_FLAG)
+    thread.start()
+    while True:
+        print(thread.output)
+        sleep(1)
 
-    def create_project_config_form(self):
-        fields = [
-            {
-                'key': 'name',
-                'prompt': 'Name: ',
-                'response': 'abyss',
-                'validator': lambda s: s.isalpha(),
-                'active': True
-             }
-        ]
-
-        fields.extend(self.form_fields(DEFAULTS, DEFAULTS_LABELS, VALIDATORS))
-        self.state.configs = self.form(fields, (self.term.width // 2)-40, 2, 80, SCREENS['create_project']['label'])
-        self.state.config_file = self.state.configs['name'] + '.json'
-        config_filepath = join(settings.configs_dir, self.state.config_file)
-        self.state.configs.pop('name')
-        save_config(self.state.configs, config_filepath)
-        self.state.active_screen = 'main_menu'
-    def draw_layout(self):
-        print(self.term.home() + self.term.clear())
-        with self.term.location((self.term.width // 5) + 2,2):
-            print(self.app_title)
-
-        with self.term.location(0, self.term.height - 1):
-            print(self.term.center(f'Arrow Keys to Navigate - Enter to Select - ESC to Exit'), end='')
