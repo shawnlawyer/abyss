@@ -249,7 +249,7 @@ class UI():
                     selections[active_menu] = selected
                 elif action == 'field_change_selected':
                     selections[menu_id] = selected
-    def draw_current_state_menus(self, thread=None): #should be menus controller
+    def menus_controller(self, thread=None): #should be menus controller
 
         menus = []
         handlers = []

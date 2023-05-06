@@ -40,8 +40,8 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
                     if 'train' in self.threads and 'draw_training_progress_report' not in self.threads:
                         self.setup_thread('draw_training_progress_report').start()
 
-                if 'draw_menus' not in self.threads:
-                    self.setup_thread('draw_menus').start()
+                if 'menus_controller' not in self.threads:
+                    self.setup_thread('menus_controller').start()
 
                 sleep(self.refresh_rate)
 
@@ -86,15 +86,9 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
         if 'callback' in ACTIONS[key]:
             self.setup_thread(ACTIONS[key]['callback']).start()
 def loading(loading=''):
-    if loading == '':
-        loading = '.'
-    elif loading == '.':
-        loading = '..'
-    elif loading == '..':
-        loading = '...'
-    else:
-        loading = ''
-    return loading
+    if loading == '...':
+        return ''
+    return loading + '.'
 
 if __name__ == "__main__":
     pass

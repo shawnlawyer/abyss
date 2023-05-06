@@ -221,7 +221,7 @@ ACTIONS = {
 }
 
 threads = {
-    "draw_menus":{"target":"draw_current_state_menus"},
+    "menus_controller":{"target":"menus_controller"},
     "draw_training_progress_report":{"target":"draw_training_progress_report"},
     "screen_buffer_controller":{"target":"screen_buffer_controller"},
     "draw_screen_buffer":{"target":"draw_screen_buffer"},
