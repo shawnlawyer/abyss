@@ -235,4 +235,5 @@ MENUS = {
     'project_actions_menu': 'generate_project_actions_menu'
 }
 APP_TITLE = "Abyss"
+DEBUG_PAUSE_RATE = 0.15
 REFRESH_RATE = 0.15

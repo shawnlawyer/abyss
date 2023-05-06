@@ -1,5 +1,3 @@
-import threading
-import subprocess
 from time import sleep
 from util import DataObject
 from const import *
@@ -64,8 +62,8 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
 
             width = 50
             height = 8
-            x = 75
-            y = 1
+            x = self.term.width // 2 - width // 2
+            y = 14
 
             self.draw_box('Training Progress', training_info_report, width, height, x, y)
             sleep(self.refresh_rate)

@@ -20,8 +20,8 @@ class Menus():
                 'options': [SCREENS['main_menu']['label']],
                 'header': APP_TITLE,
                 'width': 25,
-                'x': 0,
-                'y': 1
+                'x': self.term.width // 2 - 25 // 2,
+                'y': 4
             }, handler
 
         handler = lambda selection: {'active_screen': [selection]}
@@ -31,8 +31,8 @@ class Menus():
             'options': [SCREENS['create_project']['label']],
             'header': APP_TITLE,
             'width' : 25,
-            'x': 0,
-            'y': 1
+            'x':  self.term.width // 2 - 25 // 2,
+            'y': 4
         }, handler
 
     # Your GUI class code...
@@ -55,8 +55,8 @@ class Menus():
                 'options': project_names,
                 'header': SCREENS['choose_project_menu']['label'],
                 'width' : 25,
-                'x': 0,
-                'y': 4
+                'x': self.term.width // 2 - 25 // 2,
+                'y': 8
             }, handler
 
     def generate_project_actions_menu(self):
@@ -69,8 +69,8 @@ class Menus():
                 'options': [SCREENS[value]['label'] for value in ['train_model', 'chat_with_model', 'model_summary']],
                 'header': SCREENS['project_options_menu']['label'],
                 'width' : 25,
-                'x': 0,
-                'y': 4
+                'x': self.term.width // 2 - 25 // 2,
+                'y': 8
             }, handler
 
         return None, None
