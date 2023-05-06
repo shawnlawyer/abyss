@@ -1,144 +1,103 @@
-from os.path import join, basename, exists
-from glob import glob
 import threading
-from tensorflow.keras.models import load_model
-from util import DataObject
-import seq2seq
-from const import *
-from lib import save_config, load_config
-from os.path import join
 import subprocess
+from time import sleep
+from util import DataObject
+from const import *
 from ui import UI
+from threads import StoppableThread, ThreadedSubprocess
+from menus import Menus, MENUS
+from forms import Forms
+from lang.en import *
 
 settings = DataObject(SETTINGS)
 defaults = DataObject(DEFAULTS)
 
-SCREENS = {
-    'main_menu': {'label': 'Main Menu'},
-    'create_project': {'label': 'Create New Project'},
-    'load_project': {'label': 'Load Project'},
-    'project_options_menu': {'label': 'Project Options'},
-    'choose_project_menu': {'label': 'Choose Project'},
-    'train_model': {'label': 'Train Model'},
-    'chat_with_model': {'label': 'Chat With Model'},
-    'model_summary': {'label': 'Model Summary'}
-}
+class GUI(UI, Menus, Forms, ThreadedSubprocess,):
+    # Your GUI class code...
 
-APP_TITLE = "Abyss"
-class GUI(UI):
     def __init__(self):
         super().__init__()
         self.app_title = APP_TITLE
-    def main(self):
+        self.menus = MENUS
+        self.log_flag = LOG_FLAG
+        self.refresh_rate = REFRESH_RATE
+        self.state.active_screen = 'main_menu'
+        self.threads = {}
+        self.setup_thread('draw_screen_buffer').start()
+        self.setup_thread('draw_screen').start()#should be screen buffer controller
+
+    def draw_screen(self, thread):
+        active_screen = ''
         with self.term.fullscreen(), self.term.cbreak(), self.term.hidden_cursor():
-            active_screen = None
-            self.draw_screen()
-
-            while True:
-                if active_screen != self.state.active_screen:
+            while True if not thread else not thread.stop_event.is_set():
+                if active_screen == self.state.active_screen:
+                    continue
+                else:
                     active_screen = self.state.active_screen
-                    self.draw_screen()
-    def draw_screen(self):
-        self.draw_layout()
-        if self.state.active_screen in [None,'main_menu']:
-            self.main_menu()
-        elif self.state.active_screen == 'create_project':
-            self.create_project_config_form()
-        elif self.state.active_screen == 'project_options_menu': # this is really opening a model project
-            self.project_options_menu()
-        elif self.state.active_screen == 'load_project': # this is really opening a model project
-            self.choose_project_menu()
-        elif self.state.active_screen == 'model_summary':
-            subprocess.run(["python", "app", "--config", self.state.config_file, "--summary", "--no-gpu"])
-        elif self.state.active_screen == 'chat_with_model':
-            subprocess.run(["python", "app", "--config", self.state.config_file, "--chat", "--no-gpu"])
-        elif self.state.active_screen == 'train_model':
-            subprocess.run(["python", "app", "--config", self.state.config_file, "--train"])
-    def draw_layout(self):
-        print(self.term.home + self.term.clear)
-        with self.term.location((self.term.width // 5) + 2,2):
-            print(self.app_title)
 
-        with self.term.location(0, self.term.height - 1):
-            print(self.term.center('Arrow Keys to Navigate - Enter to Select - ESC to Exit'), end='')
+                if self.state.active_screen == 'create_project':
+                    self.create_project_config_form()
+                elif 'train' in self.threads:
 
-    def main_menu(self):
-        menus = []
+                    if 'train' in self.threads and 'draw_training_progress_report' not in self.threads:
+                        self.setup_thread('draw_training_progress_report').start()
 
-        config_files = glob(f"{settings.configs_dir}/*.json")
-        if len(config_files) == 0:
-            options_map = ['create_project']
+                if 'draw_menus' not in self.threads:
+                    self.setup_thread('draw_menus').start()
+
+                sleep(self.refresh_rate)
+
+    def draw_screen_buffer(self, thread):
+        while not thread.stop_event.is_set():
+            self.term.print_buffer()
+            sleep(self.refresh_rate)
+
+    def draw_training_progress_report(self, thread=None):
+        status = loading()
+        while True if not thread else not thread.stop_event.is_set():
+            status = loading(status)
+            if self.threads['train'].output is None:
+                training_info_report = f"Loading Model:{self.state.configs.model_filename}\nOne Moment{status}"
+            else:
+                training_info_data = self.threads['train'].output
+                training_info_report = '\n'.join(self.json_to_report(training_info_data))
+
+            width = 50
+            height = 8
+            x = 75
+            y = 1
+
+            self.draw_box('Training Progress', training_info_report, width, height, x, y)
+            sleep(self.refresh_rate)
+
+    def setup_thread(self, key):
+        if 'target' in threads.get(key):
+            target = getattr(self, threads[key]['target'])
+            self.threads[key] = StoppableThread(target)
         else:
-            options_map = ['create_project', 'load_project']
 
-        header = SCREENS['main_menu']['label']
-        options = [SCREENS[value]['label'] for value in options_map]
-        position_x = (self.term.width // 5)
-        position_y = 4
-        menus.append({'options_map':options_map, 'options':options, 'header':header, 'x':position_x, 'y':position_y})
+            command = [arg.format(**self.state) for arg in threads[key]['command']]
+            self.threads[key] = ThreadedSubprocess(command, self.log_flag)
+        return self.threads[key]
 
-        if self.state.configs and self.state.config_file:
-            options_map = ['train_model', 'chat_with_model', 'model_summary']
-            header = SCREENS['project_options_menu']['label']
-            options = [SCREENS[value]['label'] for value in ['train_model', 'chat_with_model', 'model_summary']]
-            position_x = (self.term.width // 5 ) * 2
-            position_y = 4
-            menus.append({'options_map':options_map, 'options': options, 'header': header, 'x': position_x, 'y': position_y})
+    def do_actions(self, key):
+        if key in self.threads and self.threads[key].process.poll() is not None:
+            return
 
-        menu_id, selection = self.menus(menus)
-        self.state.active_screen = menus[menu_id]['options_map'][selection]
-
-    def choose_project_menu(self):
-
-        menus = []
-
-        config_files = glob(f"{settings.configs_dir}/*.json")
-        if len(config_files) == 0:
-            options_map = ['create_project']
-        else:
-            options_map = ['create_project', 'load_project']
-
-        config_files = glob(f"{settings.configs_dir}/*.json")
-        header = SCREENS['choose_project_menu']['label']
-        options = [basename(config_file) for config_file in config_files]
-        position_x = (self.term.width // 5)
-        position_y = 4
-        menus = [{'options_map': options_map, 'options': options, 'header': header, 'x': position_x, 'y': position_y}]
-
-        menu_id, selection = self.menus(menus)
-        self.state.config_file = menus[menu_id]['options'][selection]
-        self.state.configs = DataObject(load_config(join(settings.configs_dir, self.state.config_file)))
-        self.state.active_screen = 'main_menu'
-
-    def project_options_menu(self):
-        header = SCREENS['project_options_menu']['label']
-        options_map = ['train_model', 'chat_with_model', 'model_summary']
-        options = [SCREENS[value]['label'] for value in options_map]
-        position_x = (self.term.width // 5) * 2
-        position_y = 4
-        menus = [{'options_map': options_map, 'options': options, 'header': header, 'x': position_x, 'y': position_y}]
-        menu_id, selection = self.menus(menus)
-        self.state.active_screen = menus[menu_id]['options_map'][selection]
-
-    def create_project_config_form(self):
-        fields = [
-            {
-                'key': 'name',
-                'prompt': 'Name: ',
-                'response': 'abyss',
-                'validator': lambda s: s.isalpha(),
-                'active': True
-             }
-        ]
-
-        fields.extend(self.form_fields(DEFAULTS, DEFAULTS_LABELS, VALIDATORS))
-        self.state.configs = self.form(fields, (self.term.width // 2)-40, 2, 80, SCREENS['create_project']['label'])
-        self.state.config_file = self.state.configs['name'] + '.json'
-        config_filepath = join(settings.configs_dir, self.state.config_file)
-        self.state.configs.pop('name')
-        save_config(self.state.configs, config_filepath)
-        self.state.active_screen = 'main_menu'
+        self.setup_thread(key).start()
+        if 'callback' in ACTIONS[key]:
+            self.setup_thread(ACTIONS[key]['callback']).start()
+def loading(loading=''):
+    if loading == '':
+        loading = '.'
+    elif loading == '.':
+        loading = '..'
+    elif loading == '..':
+        loading = '...'
+    else:
+        loading = ''
+    return loading
 
 if __name__ == "__main__":
-    app = GUI()
-    app.run()
+    pass
+

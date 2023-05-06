@@ -1,3 +1,5 @@
+import time
+import json
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras.models import Model, load_model
@@ -8,10 +10,12 @@ from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoa
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from util import byte_level_tokenization, byte_level_detokenization
 
-# Model building
+
+
 def build(vocab_size, embedding_size, recurrent_units, recurrent_layers=1, recurrent_type="LSTM", dropout=0.0, recurrent_dropout=0.0, learning_rate=0.001,
           learning_rate_decay=0.0, gradient_clip=None):
     input_layer = Input(shape=(None,))
+
     embedding_layer = Embedding(vocab_size, embedding_size, mask_zero=True)(input_layer)
     if recurrent_type == 'GRU':
         recurrent_layer = GRU(recurrent_units, return_sequences=True, dropout=dropout, recurrent_dropout=recurrent_dropout)
@@ -83,6 +87,116 @@ def setup_reduce_lr_callback(monitor='val_loss', factor=0.1, patience=10, min_lr
         min_lr=min_lr,
         verbose=verbose
     )
+
+def setup_print_progress_callback(batch_size, sample_size, logs_flag='', as_json=False):
+    return PrintProgressCallback(batch_size, sample_size, logs_flag, as_json)
+
+class PrintProgressCallback(tf.keras.callbacks.Callback):
+    def __init__(self, batch_size, sample_size, logs_flag='', as_json=False):
+        self.batch_size = batch_size
+        self.sample_size = sample_size
+        self.epoch_losses = []
+        self.total_start_time = time.time()
+        self.as_json = as_json
+        self.logs_flag = '\n' + logs_flag
+
+    def on_epoch_begin(self, epoch, logs=None):
+        self.epoch_start_time = time.time()
+        if self.as_json:
+            print(self.logs_flag + json.dumps({"event": "epoch_begin", "epoch": epoch + 1}))
+        else:
+            print(f"{self.logs_flag}Starting epoch {epoch + 1}")
+        self.epoch_losses = []
+
+    def on_batch_end(self, batch, logs=None):
+        batch_loss = logs["loss"]
+        batch_acc = logs.get("accuracy")
+        batch_lr = self.model.optimizer.lr.numpy().item()
+        processed_samples = (batch + 1) * (self.sample_size // self.batch_size)
+        if self.as_json:
+            print(self.logs_flag + json.dumps(
+                {"event": "batch_end", "batch": batch + 1, "batch_size": self.batch_size, "loss": batch_loss,
+                 "accuracy": batch_acc, "lr": batch_lr, "processed_samples": processed_samples,
+                 "sample_size": self.sample_size}))
+        else:
+            print(
+                f"{self.logs_flag}Batch {batch + 1}/{self.batch_size} - loss: {batch_loss:.4f} - accuracy: {batch_acc:.4f} - lr: {batch_lr:.6f} - processed samples: {processed_samples}/{self.sample_size}")
+        self.epoch_losses.append(batch_loss)
+
+    def on_epoch_end(self, epoch, logs=None):
+        epoch_loss = sum(self.epoch_losses) / len(self.epoch_losses)
+        epoch_acc = logs.get("val_accuracy")
+        epoch_val_loss = logs.get("val_loss")
+        epoch_time = time.time() - self.epoch_start_time
+        total_time = time.time() - self.total_start_time
+        if self.as_json:
+            print(self.logs_flag + json.dumps(
+                {"event": "epoch_end", "epoch": epoch + 1, "loss": epoch_loss, "accuracy": logs.get('accuracy'),
+                 "val_loss": epoch_val_loss, "val_accuracy": epoch_acc, "epoch_time": epoch_time,
+                 "total_time": total_time, "sample_size": (epoch + 1) * self.sample_size,
+                 "num_params": self.model.count_params()}))
+        else:
+            print(
+                f"{self.logs_flag}Epoch {epoch + 1} - loss: {epoch_loss:.4f} - accuracy: {logs.get('accuracy'):.4f} - val_loss: {epoch_val_loss:.4f} - val_accuracy: {epoch_acc:.4f} - time: {epoch_time:.2f}s - total time: {total_time:.2f}s")
+            print(f"{self.logs_flag}Total processed samples: {(epoch + 1) * self.sample_size}")
+            print(f"{self.logs_flag}Total number of parameters: {self.model.count_params()}")
+
+def setup_capture_progress_callback(callback, batch_size, sample_size, logs_flag='', as_json=False):
+    return CaptureProgressCallback(callback, batch_size, sample_size, logs_flag, as_json)
+
+class CaptureProgressCallback(tf.keras.callbacks.Callback):
+    def __init__(self, callback, batch_size, sample_size, logs_flag='', as_json=False):
+        self.callback = callback
+        self.batch_size = batch_size
+        self.sample_size = sample_size
+        self.epoch_losses = []
+        self.total_start_time = time.time()
+        self.as_json = as_json
+        self.logs_flag = '\n' + logs_flag if logs_flag != '' else ''
+
+    def on_epoch_begin(self, epoch, logs=None):
+        self.epoch_start_time = time.time()
+        if self.as_json:
+            output = self.logs_flag + json.dumps({"event": "epoch_begin", "epoch": epoch + 1})
+        else:
+            output = f"{self.logs_flag}Starting epoch {epoch + 1}"
+
+        self.callback(output)
+
+    def on_batch_end(self, batch, logs=None):
+        batch_loss = logs["loss"]
+        batch_acc = logs.get("accuracy")
+        batch_lr = self.model.optimizer.lr.numpy().item()
+        processed_samples = (batch + 1) * (self.batch_size // self.sample_size)
+        if self.as_json:
+            output = self.logs_flag + json.dumps(
+                {"event": "batch_end", "batch": batch + 1, "batch_size": self.batch_size, "loss": batch_loss,
+                 "accuracy": batch_acc, "lr": batch_lr, "processed_samples": processed_samples,
+                 "sample_size": self.sample_size})
+        else:
+            output = f"{self.logs_flag}Batch {batch + 1}/{self.batch_size} - loss: {batch_loss:.4f} - accuracy: {batch_acc:.4f} - lr: {batch_lr:.6f} - processed samples: {processed_samples}/{self.sample_size}"
+        self.callback(output)
+        self.epoch_losses.append(batch_loss)
+
+    def on_epoch_end(self, epoch, logs=None):
+        epoch_loss = sum(self.epoch_losses) / len(self.epoch_losses)
+        epoch_acc = logs.get("val_accuracy")
+        epoch_val_loss = logs.get("val_loss")
+        epoch_time = time.time() - self.epoch_start_time
+        total_time = time.time() - self.total_start_time
+        if self.as_json:
+            output = self.logs_flag + json.dumps(
+                {"event": "epoch_end", "epoch": epoch + 1, "loss": epoch_loss, "accuracy": logs.get('accuracy'),
+                 "val_loss": epoch_val_loss, "val_accuracy": epoch_acc, "epoch_time": epoch_time,
+                 "total_time": total_time, "sample_size": (epoch + 1) * self.sample_size,
+                 "num_params": self.model.count_params()})
+        else:
+            output = f"{self.logs_flag}Epoch {epoch + 1} - loss: {epoch_loss:.4f} - accuracy: {logs.get('accuracy'):.4f} - val_loss: {epoch_val_loss:.4f} - val_accuracy: {epoch_acc:.4f} - time: {epoch_time:.2f}s - total time: {total_time:.2f}s"
+            self.callback(output)
+            output = f"{self.logs_flag}Total processed samples: {(epoch + 1) * self.sample_size}"
+            self.callback(output)
+            output = f"{self.logs_flag}Total number of parameters: {self.model.count_params()}"
+            self.callback(output)
 
 # Saving and loading the model
 def save(model, filepath):

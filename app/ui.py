@@ -1,27 +1,70 @@
 from const import *
-from blessed import Terminal
 import time
+import json
+import threading
+import blessed
 
-BOX_1 = '╔╗╚╝═║'
+class BufferedTerminal(blessed.Terminal):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.screen_matrix = [[' ' for _ in range(self.width)] for _ in range(self.height)]
+        self.lock = threading.Lock()
 
-def unpack_box_style(box_string):
-    if len(box_string) != 6:
-        raise ValueError('box_string must be 6 characters long')
-    return tuple(box_string)
+    def write(self, x, y, text):
+        with self.lock:
+            for i, char in enumerate(list(text)):
+                self.screen_matrix[y][x + i] = char
 
-class AppState:
-    def __init__(self):
+    def print_buffer(self):
+        with self.lock:
+            self.clear()
+            self.home()
+            print('\n'.join([''.join(row) for row in self.screen_matrix]))
+
+    def clear_buffer(self):
+        with self.lock:
+            self.screen_matrix = [[' ' for _ in range(self.width)] for _ in range(self.height)]
+
+class AppState(dict):
+    def update(self, new_dict):
+        for key, value in new_dict.items():
+            setattr(self, key, value)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__dict__ = self
         self.selection = None
         self.configs = None
         self.config_file = None
         self.active_screen = None
 
-class UI:
+    def __getitem__(self, key):
+        return self.__dict__[key]
 
+    def __setitem__(self, key, value):
+        self.__dict__[key] = value
+
+
+class UI():
+
+    menus = {}
+    app_title = ""
     def __init__(self):
-        self.term = Terminal()
-        self.app_title = ""
+        self.term = BufferedTerminal()
         self.state = AppState()
+
+    def unpack_box_style(self, box_string):
+        if len(box_string) != 6:
+            raise ValueError('box_string must be 6 characters long')
+        return tuple(box_string)
+
+    def json_to_report(self, json_str):
+        data = json.loads(json_str)
+        lines = []
+        for key, value in data.items():
+            label = key.replace('_', ' ').title()
+            lines.append(f"{label}: {value}")
+        return lines
 
     def form_fields(self, values, labels, validators):
         fields = []
@@ -33,94 +76,100 @@ class UI:
             fields.append({'key':key, 'prompt': labels[key] + ": ", 'response': str(value), 'validator':validators[key], 'active': False})
         return fields
 
-    def draw_form(self, fields, x=0, y=0, max_width=None, header=None, style=BOX_1):
+    def draw_form(self, fields, x=0, y=1, width=0, header=None, style=BOX_1):
         console_width = self.term.width
-        top_left, top_right, bottom_left, bottom_right, horizontal, vertical = unpack_box_style(style)
-        if max_width == None:
-            max_width = min(max(len(field['prompt'] + field['response']) + 4 for field in fields), console_width - 4)
-
-            if header:
-                max_width = min(max(max_width, len(header)), console_width - 4)  # adjust for header length
-
-        with self.term.location(x, y):
-            # Top border
-            if header:
-                text = header.ljust(max_width - 1, horizontal)
-                print(self.term.move_x(x) + top_left + horizontal + text + top_right)
-            else:
-                print(self.term.move_x(x) + top_left + horizontal * max_width + top_right)
-
-            for idx, field in enumerate(fields):
-                if field['active']:
-                    # Toggle the display of the cursor character.
-                    if time.time() % 1 < 0.5:
-                        text = field['prompt'] + field['response'] + '|'
-                    else:
-                        text = field['prompt'] + field['response']
+        top_left, top_right, bottom_left, bottom_right, horizontal, vertical = self.unpack_box_style(style)
+        lines = []
+        for idx, field in enumerate(fields):
+            if field['active']:
+                # Toggle the display of the cursor character.
+                if time.time() % 1 < 0.5:
+                    text = field['prompt'] + field['response'] + '|'
                 else:
                     text = field['prompt'] + field['response']
+            else:
+                text = field['prompt'] + field['response']
 
-                text = text[:max_width - 2] + '...' if len(text) > max_width - 2 else text.ljust(max_width - 2)
+            text = text[:width - 2] + '...' if len(text) > width - 2 else text.ljust(width - 2)
 
-                if not field['validator'](field['response']):
-                    text += self.term.red(f'  Invalid input for field "{field["prompt"]}"!')
+            if not field['validator'](field['response']):
+                text += self.term.red(f'  Invalid input for field "{field["prompt"]}"!')
 
-                print(self.term.move_x(x, idx + 1) + vertical + ' ' + text + ' ' + vertical)
+            line = vertical + ' ' + text + ' ' + vertical
+            lines.append(line)
 
-            # Bottom border
-            print(self.term.move_x(x) + bottom_left + horizontal * max_width + bottom_right)
+        height = len(lines)
 
-    def form(self, fields, x=0, y=0, width=None, header=None, style=BOX_1):
+        self.draw_box(header, '\n'.join(lines), width, height, x, y)
+
+    def form(self, fields, x=0, y=1, width=None, header=None, style=BOX_1):
         current_field = 0
-        with self.term.cbreak(), self.term.hidden_cursor():
-            def form_key_handler(key, selected, options_length=None):
-                if key.is_sequence:
-                    if key.name == 'KEY_UP':
-                        if selected > 0:
-                            fields[selected]['active'] = False
-                            selected -= 1
-                            fields[selected]['active'] = True
-                        return 'field_change_selected', selected
-                    elif key.name == 'KEY_DOWN':
-                        if selected < len(fields) - 1:
-                            fields[selected]['active'] = False
-                            selected += 1
-                            fields[selected]['active'] = True
-                        return 'field_change_selected', selected
-                    elif key.name == 'KEY_BACKSPACE':
-                        fields[selected]['response'] = fields[selected]['response'][:-1]
-                        return 'form_backspace', selected
+
+        def form_key_handler(key, selected, options_length=None):
+            if key.is_sequence:
+                if key.name == 'KEY_UP':
+                    if selected > 0:
+                        fields[selected]['active'] = False
+                        selected -= 1
+                        fields[selected]['active'] = True
+                    return 'field_change_selected', selected
+                elif key.name == 'KEY_DOWN':
+                    if selected < len(fields) - 1:
+                        fields[selected]['active'] = False
+                        selected += 1
+                        fields[selected]['active'] = True
+                    return 'field_change_selected', selected
+                elif key.name == 'KEY_BACKSPACE':
+                    fields[selected]['response'] = fields[selected]['response'][:-1]
+                    return 'form_backspace', selected
+            else:
+                fields[selected]['response'] += key
+                return 'form_input', selected
+
+            return None, None
+
+        custom_handlers = [form_key_handler]
+
+        while True:
+            action, current_field = self.handle_key_input(current_field, custom_handlers=custom_handlers)
+            if action == 'enter':
+                invalid_fields = [field['prompt'] for field in fields if not field['validator'](field['response'])]
+                if invalid_fields:
+                    print(f'These fields have invalid inputs: {", ".join(invalid_fields)}')
                 else:
-                    fields[selected]['response'] += key
-                    return 'form_input', selected
+                    values = {}
+                    for field in fields:
+                        values[field['key']] = field['response']
+                    converted_dict = {}
+                    for key, value in values.items():
+                        if key in CONVERTERS:
+                            try:
+                                converted_dict[key] = CONVERTERS[key](value)
+                            except Exception as e:
+                                print(f"Error converting key {key}: {e}")
+                        else:
+                            print(f"No converter found for key {key}. Keeping value as is.")
+                            converted_dict[key] = value
+                    return converted_dict
+            self.draw_form(fields, x, y, width, header, style)
 
-                return None, None
+    def draw_box(self, header, text, width, height, x=1, y=1, style=BOX_1):
+        top_left, top_right, bottom_left, bottom_right, horizontal, vertical = self.unpack_box_style(style)
 
-            custom_handlers = [form_key_handler]
+        line = top_left + header + horizontal * (width - len(header) - 2) + top_right
+        self.term.write(x, y, line)
 
-            while True:
-                action, current_field = self.handle_key_input(current_field, custom_handlers=custom_handlers)
-                if action == 'enter':
-                    invalid_fields = [field['prompt'] for field in fields if not field['validator'](field['response'])]
-                    if invalid_fields:
-                        print(f'These fields have invalid inputs: {", ".join(invalid_fields)}')
-                    else:
-                        values = {}
-                        for field in fields:
-                            values[field['key']] = field['response']
-                        converted_dict = {}
-                        for key, value in values.items():
-                            if key in CONVERTERS:
-                                try:
-                                    converted_dict[key] = CONVERTERS[key](value)
-                                except Exception as e:
-                                    print(f"Error converting key {key}: {e}")
-                            else:
-                                print(f"No converter found for key {key}. Keeping value as is.")
-                                converted_dict[key] = value
-                        return converted_dict
-                print(self.term.home + self.term.clear)
-                self.draw_form(fields, x, y, width, header, style)
+        lines = text.split('\n')
+        for i in range(height):
+            if i < len(lines):
+                line = lines[i]  # truncate if too long
+                line = vertical + lines[i].ljust(width - 2) + vertical
+            else:
+                line = vertical + ' ' * (width - 2) + vertical
+            self.term.write(x, y + i + 1, line)
+
+        line = bottom_left + horizontal * (width - 2) + bottom_right
+        self.term.write(x, y + height + 1, line)
 
     def get_key_input(self):
         return self.term.inkey(timeout=0.1)  # Lower timeout for smoother blinking.
@@ -139,11 +188,11 @@ class UI:
                 quit()
         return (None, selected)
 
-    def menus(self, menus_list, style=BOX_1):
+    def draw_menus(self, menus_list, style=BOX_1):
         selections = [0] * len(menus_list)
         console_width = self.term.width
 
-        top_left, top_right, bottom_left, bottom_right, horizontal, vertical = unpack_box_style(style)
+        top_left, top_right, bottom_left, bottom_right, horizontal, vertical = self.unpack_box_style(style)
 
         active_menu = 0  # keep track of the active menu
 
@@ -179,29 +228,19 @@ class UI:
                 options = menu_dict['options']
                 header = menu_dict.get('header', None)
                 x = menu_dict.get('x', 0)
-                y = menu_dict.get('y', 0)
+                y = menu_dict.get('y', 1)
+                width = menu_dict.get('width', 0)
+                height = menu_dict.get('height', len(options))
                 selected = selections[menu_id] if menu_id == active_menu else None  # reset selection if not active menu
 
-                max_width = min(max(len(option) + 4 for option in options), console_width - 4)  # padding for box
+                lines = []
+                for i, option in enumerate(options):
+                    line = option + ' *' if i == selected else option
+                    #line = option[:width - 4] + '... ' if len(option) > width - 2 else option.ljust(width - 2)
+                    #lines.append(self.term.on_black(self.term.white(line)) if i == selected else line)
+                    lines.append(line.ljust(width - 2))
 
-                if header:
-                    max_width = min(max(max_width, len(header)), console_width - 4)  # adjust for header length
-
-                with self.term.location(x, y):
-                    # Top border
-                    if header:
-                        text = header.ljust(max_width - 1, horizontal)
-                        print(self.term.move_x(x) + top_left + horizontal + text + top_right)
-                    else:
-                        print(self.term.move_x(x) + top_left + horizontal * max_width + top_right)
-
-                    for i, option in enumerate(options):
-                        text = option[:max_width - 2] + '... ' if len(option) > max_width - 2 else option.ljust(
-                            max_width - 2)
-                        line = self.term.on_black(self.term.white(text)) if i == selected else text
-                        print(self.term.move_x(x, i + 1) + vertical + ' ' + line + ' ' + vertical)
-                        # Bottom border
-                    print(self.term.move_x(x) + bottom_left + horizontal * max_width + bottom_right)
+                self.draw_box(header, '\n'.join(lines) , width, height, x, y)
 
                 action, selected = self.handle_key_input(selected, len(options), custom_handlers=custom_handlers)
                 if action == 'enter':
@@ -210,32 +249,23 @@ class UI:
                     selections[active_menu] = selected
                 elif action == 'field_change_selected':
                     selections[menu_id] = selected
+    def draw_current_state_menus(self, thread=None): #should be menus controller
 
+        menus = []
+        handlers = []
 
-def draw_box(header, text, width, height, style=BOX_1):
-    top_left, top_right, bottom_left, bottom_right, horizontal, vertical = unpack_box_style(style)
+        for menu_name, gen_func_name in self.menus.items():
+            gen_func = getattr(self, gen_func_name)
+            menu, handler = gen_func()
+            if menu:
+                menus.append(menu)
+                handlers.append(handler)
 
-    # Initialize an empty list to store each line of the box
-    box_lines = []
+        menu_id, selection = self.draw_menus(menus)
+        update_dict = handlers[menu_id](selection)
+        if update_dict is not None:
+            self.state.update(update_dict)
 
-    # Draw top border
-    box_lines.append(top_left + header + horizontal * (width - len(header) - 2) + top_right)
-
-    # Draw text lines
-    lines = text.split('\n')
-    for i in range(height):
-        if i < len(lines):
-            line = lines[i]
-            line = line if len(line) <= width - 2 else line[:width - 5] + '...'  # truncate if too long
-            box_lines.append(vertical + line.ljust(width - 2) + vertical)
-        else:
-            box_lines.append(vertical + ' ' * (width - 2) + vertical)  # print empty line
-
-    # Draw bottom border
-    box_lines.append(bottom_left + horizontal * (width - 2) + bottom_right)
-
-    # Join the list of lines into a single string with newline characters between each line
-    return '\n'.join(box_lines)
 
 
 
@@ -243,7 +273,4 @@ def draw_box(header, text, width, height, style=BOX_1):
 
 
 if __name__ == "__main__":
-    # Test the function
-    header = "Main Menu"
-    text = "Create New Project\nLoad Project\nAnother line of text"
-    print(draw_box(header, text, 25, 5))
+    pass
