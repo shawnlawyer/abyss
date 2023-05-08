@@ -17,7 +17,6 @@ class Form():
         return fields
 
     def draw_form(self, fields, x=0, y=1, width=0, header=None):
-        console_width = self.term.width
         lines = []
         for idx, field in enumerate(fields):
             if field['active']:
@@ -39,7 +38,7 @@ class Form():
 
         height = len(lines)
 
-        self.draw_box(header, '\n'.join(lines), width, height, x, y)
+        self.draw_border(header, '\n'.join(lines), width, height, x, y)
 
     def form(self, fields, x=0, y=1, width=None, header=None):
         current_field = 0

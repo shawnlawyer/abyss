@@ -66,7 +66,7 @@ class UI(Form, Menu):
             lines.append(f"{label}: {value}")
         return lines
 
-    def draw_box(self, header, text, width, height, x=1, y=1, style=BOX_1):
+    def draw_border(self, header, text, width, height, x=1, y=1, style=BOX_1):
         top_left, top_right, bottom_left, bottom_right, horizontal, vertical = self.unpack_box_style(style)
 
         line = top_left + header + horizontal * (width - len(header) - 2) + top_right

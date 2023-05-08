@@ -71,7 +71,7 @@ class Menu():
                     line = option + ' *' if i == selected else option
                     lines.append(line.ljust(width - 2))
 
-                self.draw_box(header, '\n'.join(lines) , width, height, x, y)
+                self.draw_border(header, '\n'.join(lines) , width, height, x, y)
 
                 action, selected = self.handle_key_input(selected, len(options), custom_handlers=custom_handlers)
                 if action == 'enter':

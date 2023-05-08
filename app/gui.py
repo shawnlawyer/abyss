@@ -70,7 +70,7 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
             x = self.term.width // 2 - width // 2
             y = 14
 
-            self.draw_box('Training Progress', training_info_report, width, height, x, y)
+            self.draw_border('Training Progress', training_info_report, width, height, x, y)
             sleep(self.refresh_rate)
 
     def setup_thread(self, key):
