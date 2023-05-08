@@ -27,27 +27,25 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
 
         self.threads['draw_screen_buffer'].start()
         self.threads['screen_buffer_controller'].start()
+        self.threads['menus_controller'].start()
 
+    def debug(self):
+        self.threads['draw_screen_buffer'].stop()
     def screen_buffer_controller(self, thread):
         active_screen = ''
         show_menus = True # this is a bit of a hack for now but
         with self.term.fullscreen(), self.term.cbreak(), self.term.hidden_cursor():
-            while True if not thread else not thread.stop_event.is_set():
+            while not thread.stop_event.is_set():
                 if active_screen == self.state.active_screen:
                     continue
                 else:
                     active_screen = self.state.active_screen
 
                 if self.state.active_screen == 'create_project':
-
                     self.create_project_config_form()
 
-                if self.state.active_screen == 'project_details':
-                    if 'train' in self.threads['train'] and 'draw_training_progress_report' not in self.threads:
-                        self.setup_thread('draw_training_progress_report').start()
-
-                if self.threads['menus_controller'].can_start():
-                    self.setup_thread('menus_controller').start()
+                if self.state.active_screen == 'tune_project':
+                    self.tuning_settings_form()
 
                 sleep(self.refresh_rate)
 
@@ -67,7 +65,6 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
             else:
                 training_info_data = self.threads['train'].output
                 training_info_report = '\n'.join(self.json_to_report(training_info_data))
-
             width = 50
             height = 8
             x = self.term.width // 2 - width // 2
@@ -82,8 +79,8 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
             target = getattr(self, THREADS[key]['target'])
             self.threads[key] = StoppableThread(target)
         else:
-            command = [arg.format(**self.state) for arg in THREADS[key]['command']]
-            self.threads[key] = ThreadedSubprocess(command, self.log_flag)
+            command = THREADS[key]['command']
+            self.threads[key] = ThreadedSubprocess(command, self)
 
         return self.threads[key]
 

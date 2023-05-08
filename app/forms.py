@@ -32,3 +32,7 @@ class Forms():
         self.state.configs.pop('name')
         save_config(self.state.configs, config_filepath)
         self.state.active_screen = 'main_menu'
+    def tuning_settings_form(self):
+        fields = self.form_fields(TUNING_SETTINGS_FORM_FIELDS, TUNING_SETTINGS_LABELS, TUNING_SETTINGS_VALIDATORS)
+        self.state.configs_tuning = self.form(fields, (self.term.width // 2)-40, 2, 60, SCREENS['tune_project']['label'])
+        self.state.active_screen = 'tuning_settings_detail'

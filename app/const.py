@@ -131,6 +131,18 @@ SETTINGS_VALIDATORS = {
     "datasets": lambda s: set(s.replace(" ", "").split(',')) <= set(['cmc', 'persona_chat']),
 }
 
+TUNING_SETTINGS_FORM_FIELDS  = {
+    "vocab_size": 256,
+    "datasets": [
+        "cmc",
+        "persona_chat"
+    ],
+    "batch_size" : 64,
+    "sample_size" : 500000,
+    "max_length" : 1024,
+    "randomize_sample" : True
+}
+
 TUNING_SETTINGS_DEFAULTS  = {
     'hypermodel': None,
     'train_data': None,
@@ -146,6 +158,7 @@ TUNING_SETTINGS_DEFAULTS  = {
     'objective': 'val_loss',
     'overwrite': False
 }
+TUNING_SETTINGS_LABELS = {key: key.replace('_', ' ').title() for key in TUNING_SETTINGS_DEFAULTS}
 TUNING_SETTINGS_VALIDATORS = {
     "hypermodel": lambda s: isinstance(s, str),
     "train_data": lambda s: isinstance(s, str),
@@ -199,7 +212,9 @@ BOX_1 = '╔╗╚╝═║'
 SCREENS = {
     'main_menu': {'label': 'Abyss Terminal'},
     'create_project': {'label': 'Create New Project'},
-    'project_details': {'label': 'Project Details'}
+    'tune_project': {'label': 'Tune New Project'},
+    'project_details': {'label': 'Project Details'},
+    'tuning_settings_detail': {'label': 'Tuning Details'}
 }
 
 ACTIONS = {
@@ -226,6 +241,7 @@ MENUS = {
 
 FORMS = {
     'create_project_config_form': 'create_project_config_form',
+    'tuning_settings_form': 'tuning_settings_form',
 }
 
 APP_TITLE = "Abyss"

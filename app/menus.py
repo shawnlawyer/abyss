@@ -9,70 +9,64 @@ settings = DataObject(SETTINGS)
 defaults = DataObject(DEFAULTS)
 
 class Menus():
-    # Your GUI class code...
-    state = []
-    def generate_main_menu(self):
-        if self.state.active_screen != 'main_menu':
-            options_map = ['main_menu']
-            handler = lambda selection: {'active_screen': options_map[selection]}
-            return {
-                'menu': 'main_menu',
-                'options_map': ['main_menu'],
-                'options': [SCREENS['main_menu']['label']],
-                'header': APP_TITLE,
-                'width': 25,
-                'x': self.term.width // 2 - 25 // 2,
-                'y': 4
-            }, handler
 
-        options_map = ['create_project']
-        handler = lambda selection: {'active_screen': options_map[selection]}
-        return {
-            'menu': 'main_menu',
-            'options_map': ['create_project'],
-            'options': [SCREENS['create_project']['label']],
-            'header': APP_TITLE,
-            'width' : 25,
-            'x':  self.term.width // 2 - 25 // 2,
-            'y': 4
-        }, handler
+    def get_menus(self, width=25, x_offset = 4, y_offset = 4, align='left'):
 
-    # Your GUI class code...
-
-    def generate_choose_project_menu(self):
-
-        if self.state.active_screen != 'main_menu':
-            return None, None
 
         config_files = glob(f"{settings.configs_dir}/*.json")
-        if config_files:
-            project_names = [basename(config_file) for config_file in config_files]
-            handler = lambda selection: {
-                'config_file': project_names[selection],
-                'configs': DataObject(load_config(join(settings.configs_dir, project_names[selection]))),
-                'active_screen': 'project_details'
-            }
-            return {
-                'menu': 'choose_project_menu',
-                'options': project_names,
+
+        main_menu_home_options_map = ['create_project', 'tune_project']
+        main_menu_back_options_map = ['main_menu']
+        choose_project_options_map = [basename(config_file) for config_file in config_files] if config_files else []
+        project_options_menu_options_map = ['train', 'chat', 'model']
+
+        menus = {
+            'main_menu_home': {
+                'header': APP_TITLE,
+                'options': [SCREENS['create_project']['label']],
+                'handler': lambda selection: {'active_screen': main_menu_home_options_map[selection]},
+                'condition': lambda: self.state.active_screen == 'main_menu'
+            },
+            'main_menu_back': {
+                'header': APP_TITLE,
+                'options': [SCREENS['main_menu']['label']],
+                'handler': lambda selection: {'active_screen': main_menu_back_options_map[selection]},
+                'condition': lambda: self.state.active_screen != 'main_menu'
+            },
+            'choose_project_menu': {
                 'header': MENUS['choose_project_menu']['label'],
-                'width' : 25,
-                'x': self.term.width // 2 - 25 // 2,
-                'y': 8
-            }, handler
-
-    def generate_project_options_menu(self):
-        if self.state.configs and self.state.config_file:
-            options_map = ['train', 'chat', 'model']
-            handler = lambda selection: self.options_selection_hander(options_map[selection])
-            return {
-                'menu': 'project_actions_menu',
-                'options_map': options_map,
-                'options': [ACTIONS[value]['label'] for value in ACTIONS],
+                'options': choose_project_options_map,
+                'handler': lambda selection: {
+                    'config_file': choose_project_options_map[selection],
+                    'configs': DataObject(load_config(join(settings.configs_dir, choose_project_options_map[selection]))),
+                    'active_screen': 'project_details'
+                },
+                'condition': lambda: self.state.active_screen == 'main_menu' and config_files
+            },
+            'project_options_menu': {
                 'header': MENUS['project_options_menu']['label'],
-                'width' : 25,
-                'x': self.term.width // 2 - 25 // 2,
-                'y': 8
-            }, handler
+                'options': [ACTIONS[value]['label'] for value in ACTIONS],
+                'handler': lambda selection: self.options_selection_handler(
+                    project_options_menu_options_map[selection]),
+                'condition': lambda: self.state.configs and self.state.config_file
+            }
+        }
 
-        return None, None
+        current_menus = []
+        for key, menu in menus.items():
+            if menu['condition']():
+                menu['width'] = width
+
+                if align == 'center':
+                    menu['x'] = self.term.width // 2 - width // 2
+                elif align == 'right':
+                    menu['x'] = self.term.width - width - x_offset
+                else:  # align == 'left':
+                    menu['x'] = x_offset
+
+                menu['y'] = y_offset
+                y_offset += len(menu['options']) + 2
+                current_menus.append(menu)
+
+        return current_menus
+

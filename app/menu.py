@@ -1,6 +1,24 @@
 from const import *
 
 class Menu():
+    def menus_controller(self, thread=None):
+        while not thread.stop_event.is_set():
+
+            menus = self.get_menus()
+            menu_id, selection = self.draw_menus(menus)
+            update_dict = menus[menu_id]['handler'](selection)
+            if update_dict is not None:
+                self.state.update(update_dict)
+
+    def options_selection_handler(self, key):
+
+        if  self.threads[key].can_start():
+            self.threads[key].start()
+            if 'callback' in ACTIONS[key]:
+                callback = ACTIONS[key]['callback']
+                if callback in self.threads:
+                    if self.threads[callback].can_start():
+                        self.threads[callback].start()
 
 
     def draw_menus(self, menus_list, style=BOX_1):
@@ -65,30 +83,6 @@ class Menu():
                 elif action == 'field_change_selected':
                     selections[menu_id] = selected
 
-    def menus_controller(self, thread=None): #should be menus controller
-
-        menus = []
-        handlers = []
-
-        for key, value in self.menus.items():
-            gen_func = getattr(self, value['source'])
-            menu, handler = gen_func()
-            if menu:
-                menus.append(menu)
-                handlers.append(handler)
-
-        menu_id, selection = self.draw_menus(menus)
-        update_dict = handlers[menu_id](selection)
-        if update_dict is not None:
-            self.state.update(update_dict)
-
-    def options_selection_hander(self, key):
-        if key in self.threads and self.threads[key].process.poll() is not None:
-            return
-
-        self.setup_thread(key).start()
-        if 'callback' in ACTIONS[key]:
-            self.setup_thread(ACTIONS[key]['callback']).start()
 
 
 if __name__ == "__main__":

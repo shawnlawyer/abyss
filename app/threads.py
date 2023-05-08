@@ -1,7 +1,8 @@
 import threading
 import subprocess
+from const import *
 class StoppableThread(threading.Thread):
-    def __init__(self, target, args=(), kwargs=None, *args_, **kwargs_):
+    def __init__(self, target, args=(),  kwargs=None, *args_, **kwargs_):
         super().__init__(*args_, **kwargs_)
         self.target = target
         self.args = args
@@ -9,15 +10,14 @@ class StoppableThread(threading.Thread):
         self.kwargs['thread'] = self
         self.stop_event = threading.Event()
         self.started = False
-    def can_start(self):
-         return not self.has_started() or self.is_alive()
     def has_started(self):
-         return self.started
-    def is_alive(self):
-         return not self.stop_event.is_set()
+        return self.started
     def run(self):
         while not self.stop_event.is_set():
             self.target(*self.args, **self.kwargs)
+
+    def can_start(self):
+        return not (self.has_started() or self.stop_event.is_set())
 
     def start(self):
         self.started = True
@@ -32,22 +32,25 @@ class ThreadedSubprocess(StoppableThread):
     output = None
     started = False
 
-    def __init__(self, cmd, log_flag):
+    def __init__(self, command, app):
         super().__init__(target=self.capture_output)
-        self.cmd = cmd
-        self.log_flag = log_flag
-    def is_alive(self):
-         return self.process.poll() is None and super().is_alive()
+        self.command = command
+        self.log_flag = LOG_FLAG
+        self.process = None
+        self.app = app
+
     def capture_output(self, thread):
-        while self.is_alive():# this should be able to have is_alive()
-            str = self.process.stdout.readline().decode().strip()
-            if (str == '' and self.process.poll() is not None ) or (self.log_flag != '' and self.log_flag not in str):
+        while not self.stop_event.is_set():# this should be able to have is_alive()
+            text = self.process.stdout.readline().decode().strip()
+            if text == '' and self.process.poll() is not None:
                 continue
-            self.output = str.replace(self.log_flag, '') if self.log_flag and self.log_flag in str else str
+
+            if self.log_flag in text:
+                self.output = text.replace(self.log_flag, '') if self.log_flag and self.log_flag in text else text
 
     def start(self):
-
-        self.process = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        command = [arg.format(**self.app.state) for arg in self.command]
+        self.process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         super().start()
 
     def stop(self):
