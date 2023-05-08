@@ -16,9 +16,8 @@ class Form():
             fields.append({'key':key, 'prompt': labels[key] + ": ", 'response': str(value), 'validator':validators[key], 'active': False})
         return fields
 
-    def draw_form(self, fields, x=0, y=1, width=0, header=None, style=BOX_1):
+    def draw_form(self, fields, x=0, y=1, width=0, header=None):
         console_width = self.term.width
-        top_left, top_right, bottom_left, bottom_right, horizontal, vertical = self.unpack_box_style(style)
         lines = []
         for idx, field in enumerate(fields):
             if field['active']:
@@ -35,14 +34,14 @@ class Form():
             if not field['validator'](field['response']):
                 text += self.term.red(f'  Invalid input for field "{field["prompt"]}"!')
 
-            line = vertical + ' ' + text + ' ' + vertical
+            line = text
             lines.append(line)
 
         height = len(lines)
 
         self.draw_box(header, '\n'.join(lines), width, height, x, y)
 
-    def form(self, fields, x=0, y=1, width=None, header=None, style=BOX_1):
+    def form(self, fields, x=0, y=1, width=None, header=None):
         current_field = 0
 
         def form_key_handler(key, selected=0, options_length=None):
@@ -91,7 +90,7 @@ class Form():
                             print(f"No converter found for key {key}. Keeping value as is.")
                             converted_dict[key] = value
                     return converted_dict
-            self.draw_form(fields, x, y, width, header, style)
+            self.draw_form(fields, x, y, width, header)
 
 
 

@@ -69,8 +69,6 @@ class Menu():
                 lines = []
                 for i, option in enumerate(options):
                     line = option + ' *' if i == selected else option
-                    #line = option[:width - 4] + '... ' if len(option) > width - 2 else option.ljust(width - 2)
-                    #lines.append(self.term.on_black(self.term.white(line)) if i == selected else line)
                     lines.append(line.ljust(width - 2))
 
                 self.draw_box(header, '\n'.join(lines) , width, height, x, y)
