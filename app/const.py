@@ -213,6 +213,7 @@ SCREENS = {
     'main_menu': {'label': 'Abyss Terminal'},
     'create_project': {'label': 'Create New Project'},
     'tune_project': {'label': 'Tune New Project'},
+    'application_settings': {'label': 'Application Settings'},
     'project_details': {'label': 'Project Details'},
     'tuning_settings_detail': {'label': 'Tuning Details'}
 }
@@ -226,22 +227,43 @@ ACTIONS = {
 }
 
 THREADS = {
-    "menus_controller":{"target":"menus_controller"},
-    "draw_training_progress_report":{"target":"draw_training_progress_report"},
-    "screen_buffer_controller":{"target":"screen_buffer_controller"},
-    "draw_screen_buffer":{"target":"draw_screen_buffer"},
-    "train":{"command":['python', 'app', '--config', '{config_file}', '--train']},
+    "screen_controller":{
+        "required" : True
+    },
+    "draw_screen_buffer":{
+        "required" : True
+    },
+    "menus_controller":{
+        "required" : True
+    },
+    "draw_training_progress_report":{
+        "required" : False
+    },
+    "train":{
+        "required" : False,
+        "command":['python', 'app', '--config', '{config_file}', '--train']
+    },
 }
 
 MENUS = {
-    'main_menu': {'label':'Options','source':'generate_main_menu'},
-    'choose_project_menu': {'label':'Projects','source':'generate_choose_project_menu'},
-    'project_options_menu': {'label':'Project Options','source':'generate_project_options_menu'}
+    'main_menu': {
+        'label':'Options',
+        'source':'generate_main_menu'
+    },
+    'choose_project_menu': {
+        'label':'Projects',
+        'source':'generate_choose_project_menu'
+    },
+    'project_options_menu': {
+        'label':'Project Options',
+        'source':'generate_project_options_menu'
+    }
 }
 
 FORMS = {
     'create_project_config_form': 'create_project_config_form',
     'tuning_settings_form': 'tuning_settings_form',
+    'application_settings_form': 'application_settings_form',
 }
 
 APP_TITLE = "Abyss"

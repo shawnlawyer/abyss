@@ -1,59 +1,30 @@
 from const import *
-import time
 import json
-import threading
-import blessed
 from form import Form
-from menu import Menu
+from terminal import BufferedTerminal
+from state import AppState
+from threads import StoppableThread, ThreadedSubprocess
 
-class BufferedTerminal(blessed.Terminal):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.screen_matrix = [[' ' for _ in range(self.width)] for _ in range(self.height)]
-        self.lock = threading.Lock()
+class UI(Form):
 
-    def write(self, x, y, text):
-        with self.lock:
-            for i, char in enumerate(list(text)):
-                self.screen_matrix[y][x + i] = char
-
-    def print_buffer(self):
-        with self.lock:
-            self.clear()
-            self.home()
-            print('\n'.join([''.join(row) for row in self.screen_matrix]))
-
-    def clear_buffer(self):
-        with self.lock:
-            self.screen_matrix = [[' ' for _ in range(self.width)] for _ in range(self.height)]
-
-class AppState(dict):
-    def update(self, new_dict):
-        for key, value in new_dict.items():
-            setattr(self, key, value)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.__dict__ = self
-        self.selection = None
-        self.configs = None
-        self.config_file = None
-        self.active_screen = None
-
-    def __getitem__(self, key):
-        return self.__dict__[key]
-
-    def __setitem__(self, key, value):
-        self.__dict__[key] = value
-
-
-class UI(Form, Menu):
-
-    menus = {}
     app_title = ""
     def __init__(self):
         self.term = BufferedTerminal()
         self.state = AppState()
+
+    def setup_thread(self, key):
+
+        if 'command' in THREADS.get(key):
+            command = THREADS[key]['command']
+            self.threads[key] = ThreadedSubprocess(command, self)
+        else:
+            target = getattr(self, key)
+            self.threads[key] = StoppableThread(target)
+
+        return self.threads[key]
+
+    def debug(self):
+        self.threads['draw_screen_buffer'].stop()
 
     def unpack_box_style(self, box_string):
         return tuple(box_string)
@@ -66,11 +37,12 @@ class UI(Form, Menu):
             lines.append(f"{label}: {value}")
         return lines
 
-    def draw_border(self, header, text, width, height, x=1, y=1, style=BOX_1):
+    def add_border(self, header, text, width, height, style=BOX_1):
         top_left, top_right, bottom_left, bottom_right, horizontal, vertical = self.unpack_box_style(style)
 
-        line = top_left + header + horizontal * (width - len(header) - 2) + top_right
-        self.term.write(x, y, line)
+        border = []
+        top_line = top_left + header + horizontal * (width - len(header) - 2) + top_right
+        border.append(top_line)
 
         lines = text.split('\n')
         for i in range(height):
@@ -79,10 +51,16 @@ class UI(Form, Menu):
                 line = vertical + lines[i].ljust(width - 2) + vertical
             else:
                 line = vertical + ' ' * (width - 2) + vertical
-            self.term.write(x, y + i + 1, line)
+            border.append(line)
 
-        line = bottom_left + horizontal * (width - 2) + bottom_right
-        self.term.write(x, y + height + 1, line)
+        bottom_line = bottom_left + horizontal * (width - 2) + bottom_right
+        border.append(bottom_line)
+
+        return border
+    def write_to_screen_buffer(self, text_with_border, x=1, y=1):
+        lines = text_with_border
+        for i, line in enumerate(lines):
+            self.term.write(x, y + i, line)
 
     def get_key_input(self):
         return self.term.inkey(timeout=0.1)  # Lower timeout for smoother blinking.

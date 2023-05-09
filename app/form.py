@@ -1,9 +1,5 @@
 from const import *
 import time
-import json
-import threading
-import blessed
-
 class Form():
 
     def form_fields(self, values, labels, validators):
@@ -16,7 +12,7 @@ class Form():
             fields.append({'key':key, 'prompt': labels[key] + ": ", 'response': str(value), 'validator':validators[key], 'active': False})
         return fields
 
-    def draw_form(self, fields, x=0, y=1, width=0, header=None):
+    def write_form_to_screen_buffer(self, fields, x=0, y=1, width=0, header=None):
         lines = []
         for idx, field in enumerate(fields):
             if field['active']:
@@ -38,7 +34,8 @@ class Form():
 
         height = len(lines)
 
-        self.draw_border(header, '\n'.join(lines), width, height, x, y)
+        text = self.add_border(header, '\n'.join(lines), width, height)
+        self.write_to_screen_buffer(text, x, y)
 
     def form(self, fields, x=0, y=1, width=None, header=None):
         current_field = 0
@@ -69,6 +66,8 @@ class Form():
         custom_handlers = [form_key_handler]
 
         while True:
+
+            self.write_form_to_screen_buffer(fields, x, y, width, header)
             action, current_field = self.handle_key_input(current_field, custom_handlers=custom_handlers)
             if action == 'enter':
                 invalid_fields = [field['prompt'] for field in fields if not field['validator'](field['response'])]
@@ -89,7 +88,6 @@ class Form():
                             print(f"No converter found for key {key}. Keeping value as is.")
                             converted_dict[key] = value
                     return converted_dict
-            self.draw_form(fields, x, y, width, header)
 
 
 

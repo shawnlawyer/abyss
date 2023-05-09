@@ -2,7 +2,6 @@ from time import sleep
 from util import DataObject
 from const import *
 from ui import UI
-from threads import StoppableThread, ThreadedSubprocess
 from menus import Menus, MENUS
 from forms import Forms
 from lang.en import *
@@ -10,7 +9,7 @@ from lang.en import *
 settings = DataObject(SETTINGS)
 defaults = DataObject(DEFAULTS)
 
-class GUI(UI, Menus, Forms, ThreadedSubprocess,):
+class GUI(UI, Menus, Forms,):
     # Your GUI class code...
 
     def __init__(self):
@@ -21,17 +20,16 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
         self.refresh_rate = REFRESH_RATE
         self.debug_pause_rate = DEBUG_PAUSE_RATE
         self.state.active_screen = 'main_menu'
+
         self.threads = {}
         for key in THREADS:
-            self.setup_thread(key)
+            thread = self.setup_thread(key)
+            if THREADS[key]['required'] == True:
+                thread.start()
 
-        self.threads['draw_screen_buffer'].start()
-        self.threads['screen_buffer_controller'].start()
-        self.threads['menus_controller'].start()
+        #self.debug()
 
-    def debug(self):
-        self.threads['draw_screen_buffer'].stop()
-    def screen_buffer_controller(self, thread):
+    def screen_controller(self, thread):
         active_screen = ''
         show_menus = True # this is a bit of a hack for now but
         with self.term.fullscreen(), self.term.cbreak(), self.term.hidden_cursor():
@@ -41,11 +39,7 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
                 else:
                     active_screen = self.state.active_screen
 
-                if self.state.active_screen == 'create_project':
-                    self.create_project_config_form()
-
-                if self.state.active_screen == 'tune_project':
-                    self.tuning_settings_form()
+                self.forms_controller()
 
                 sleep(self.refresh_rate)
 
@@ -57,6 +51,12 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
             sleep(self.refresh_rate)
 
     def draw_training_progress_report(self, thread=None):
+
+        def loading(loading='', length=8 , loading_str='.'):
+            if loading == (loading_str) * length:
+                return ''
+            return loading + '.'
+
         status = loading()
         while True if not thread else not thread.stop_event.is_set():
             status = loading(status)
@@ -70,24 +70,10 @@ class GUI(UI, Menus, Forms, ThreadedSubprocess,):
             x = self.term.width // 2 - width // 2
             y = 14
 
-            self.draw_border('Training Progress', training_info_report, width, height, x, y)
+            text = self.add_border('Training Progress', training_info_report, width, height)
+            self.write_to_screen_buffer(text, x, y)
             sleep(self.refresh_rate)
 
-    def setup_thread(self, key):
-
-        if 'target' in THREADS.get(key):
-            target = getattr(self, THREADS[key]['target'])
-            self.threads[key] = StoppableThread(target)
-        else:
-            command = THREADS[key]['command']
-            self.threads[key] = ThreadedSubprocess(command, self)
-
-        return self.threads[key]
-
-def loading(loading=''):
-    if loading == '...':
-        return ''
-    return loading + '.'
 
 if __name__ == "__main__":
     pass
