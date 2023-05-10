@@ -7,18 +7,13 @@ from lib import save_config
 settings = DataObject(SETTINGS)
 defaults = DataObject(DEFAULTS)
 
-FORMS_X = 30
-FORMS_Y = 4
-FORMS_WIDTH = 60
-
-
 class Forms():
 
     def forms_controller(self):
         if 'form' in SCREENS[self.state.active_screen]:
             form = SCREENS[self.state.active_screen]['form']
             form = self.get_form_config(form)
-            form = self.set_form_screen_location(form, FORMS_WIDTH, FORMS_X, FORMS_Y)
+            form = self.set_form_screen_location(form, FORMS_WIDTH, FORMS_X, FORMS_Y, FORMS_ALIGN)
             fields = self.form_fields(form['values'], form['labels'], form['validators'])
             values = self.handle_form(fields, form['x'], form['y'], form['width'], form['header'])
             form['handler'](values)
@@ -70,7 +65,7 @@ class Forms():
         return None
 
 
-    def set_form_screen_location(self, form, width=25, x_offset=4, y_offset=4, align='left'):
+    def set_form_screen_location(self, form, width=60, x_offset=1, y_offset=1, align='left'):
 
         form['width'] = width
         if align == 'center':

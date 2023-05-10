@@ -1,5 +1,21 @@
 
 
+
+SAVE_FILE_FORM_FIELDS = {
+    "filename": ""
+}
+
+SAVE_FILE_FORM_FIELD_LABELS = {
+    "filename": "Name"
+}
+
+SAVE_FILE_FORM_FIELD_CONVERTERS = {
+    "filename": lambda s: isinstance(s, str),
+}
+
+SAVE_FILE_FORM_FIELD_VALIDATORS = {
+    "filename": lambda s: isinstance(s, str),
+}
 #!# Change this to Application Settings Defaults
 SETTINGS = {
     "configs_dir": "configs",
@@ -270,18 +286,12 @@ APP_TITLE = "Abyss"
 DEBUG_PAUSE_RATE = 0
 REFRESH_RATE = 0.15
 
-SAVE_FILE_FORM_FIELDS = {
-    "filename": ""
-}
+MENUS_WIDTH=25
+MENUS_X=4
+MENUS_Y=4
+MENUS_ALIGN='left'
 
-SAVE_FILE_FORM_FIELD_LABELS = {
-    "filename": "Name"
-}
-
-SAVE_FILE_FORM_FIELD_CONVERTERS = {
-    "filename": lambda s: isinstance(s, str),
-}
-
-SAVE_FILE_FORM_FIELD_VALIDATORS = {
-    "filename": lambda s: isinstance(s, str),
-}
+FORMS_WIDTH = 60
+FORMS_X = 30
+FORMS_Y = 4
+FORMS_ALIGN = 'left'

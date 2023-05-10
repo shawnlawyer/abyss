@@ -2,8 +2,7 @@ from os.path import join, basename
 from glob import glob
 from util import DataObject
 from const import *
-from lib import save_config, load_config
-from ui import UI
+from lib import load_config
 
 settings = DataObject(SETTINGS)
 defaults = DataObject(DEFAULTS)
@@ -12,7 +11,7 @@ class Menus():
     def menus_controller(self, thread=None):
         while not thread.stop_event.is_set():
             menus = self.get_menus()
-            menus = self.set_menus_screen_location(menus)
+            menus = self.set_menus_screen_location(menus, MENUS_WIDTH, MENUS_X, MENUS_Y, MENUS_ALIGN)
             self.handle_menus(menus)
 
     def get_menus(self):
@@ -70,7 +69,7 @@ class Menus():
                 current_menus.append(menu)
         return current_menus
 
-    def set_menus_screen_location(self, menus, width=25, x_offset=4, y_offset=4, align='left'):
+    def set_menus_screen_location(self, menus, width=25, x_offset=1, y_offset=1, align='left'):
 
         for menu in menus:
             menu['width'] = width
