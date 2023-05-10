@@ -211,9 +211,18 @@ BOX_1 = '╔╗╚╝═║'
 
 SCREENS = {
     'main_menu': {'label': 'Abyss Terminal'},
-    'create_project': {'label': 'Create New Project'},
-    'tune_project': {'label': 'Tune New Project'},
-    'application_settings': {'label': 'Application Settings'},
+    'create_project': {
+        'label': 'Create New Project',
+        'form': 'create_project_config_form'
+    },
+    'tune_project': {
+        'label': 'Tune New Project',
+        'form': 'tuning_settings_form'
+    },
+    'application_settings': {
+        'label': 'Application Settings',
+        'form': 'application_settings_form'
+     },
     'project_details': {'label': 'Project Details'},
     'tuning_settings_detail': {'label': 'Tuning Details'}
 }
@@ -247,25 +256,32 @@ THREADS = {
 
 MENUS = {
     'main_menu': {
-        'label':'Options',
-        'source':'generate_main_menu'
+        'label':'Options'
     },
     'choose_project_menu': {
-        'label':'Projects',
-        'source':'generate_choose_project_menu'
+        'label':'Projects'
     },
     'project_options_menu': {
-        'label':'Project Options',
-        'source':'generate_project_options_menu'
+        'label':'Project Options'
     }
-}
-
-FORMS = {
-    'create_project_config_form': 'create_project_config_form',
-    'tuning_settings_form': 'tuning_settings_form',
-    'application_settings_form': 'application_settings_form',
 }
 
 APP_TITLE = "Abyss"
 DEBUG_PAUSE_RATE = 0
 REFRESH_RATE = 0.15
+
+SAVE_FILE_FORM_FIELDS = {
+    "filename": ""
+}
+
+SAVE_FILE_FORM_FIELD_LABELS = {
+    "filename": "Name"
+}
+
+SAVE_FILE_FORM_FIELD_CONVERTERS = {
+    "filename": lambda s: isinstance(s, str),
+}
+
+SAVE_FILE_FORM_FIELD_VALIDATORS = {
+    "filename": lambda s: isinstance(s, str),
+}

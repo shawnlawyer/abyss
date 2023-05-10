@@ -1,11 +1,10 @@
 from const import *
 import json
-from form import Form
 from terminal import BufferedTerminal
 from state import AppState
 from threads import StoppableThread, ThreadedSubprocess
 
-class UI(Form):
+class UI():
 
     app_title = ""
     def __init__(self):
