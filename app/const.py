@@ -223,10 +223,13 @@ TUNING_SETTINGS_FORM_FIELDS  = {
 LOG_FLAG = "Abyss_Log:"
 
 BOX_1 = '╔╗╚╝═║'
+BOX_2 = '┌┐└┘─│'
+
+CURSOR = '▏'
 
 
 SCREENS = {
-    'main_menu': {'label': 'Abyss Terminal'},
+    'home': {'label': 'Abyss Terminal'},
     'create_project': {
         'label': 'Create New Project',
         'form': 'create_project_config_form'
@@ -258,7 +261,7 @@ THREADS = {
     "draw_screen_buffer":{
         "required" : True
     },
-    "menus_controller":{
+    "sidebar_menu_controller":{
         "required" : True
     },
     "draw_training_progress_report":{
@@ -271,27 +274,37 @@ THREADS = {
 }
 
 MENUS = {
-    'main_menu': {
-        'label':'Options'
+    'create_menu': {
+        'label':'Create New Project'
     },
     'choose_project_menu': {
-        'label':'Projects'
+        'label':'Load Existing Project'
     },
     'project_options_menu': {
         'label':'Project Options'
+    },
+    'application_menu': {
+        'label':'Other'
     }
 }
 
 APP_TITLE = "Abyss"
 DEBUG_PAUSE_RATE = 0
 REFRESH_RATE = 0.15
+GUTTER = 1
 
-MENUS_WIDTH=25
-MENUS_X=4
-MENUS_Y=4
+MENUS_WIDTH=28
+MENUS_X=GUTTER
+MENUS_Y=GUTTER
 MENUS_ALIGN='left'
 
 FORMS_WIDTH = 60
-FORMS_X = 30
-FORMS_Y = 4
+FORMS_X = MENUS_X + MENUS_WIDTH + GUTTER
+FORMS_Y = MENUS_Y
 FORMS_ALIGN = 'left'
+
+REPORTS_WIDTH = 50
+REPORTS_HEIGHT = 8
+REPORTS_X = MENUS_X + MENUS_WIDTH + GUTTER
+REPORTS_Y = MENUS_Y
+REPORTS_ALIGN = 'left'

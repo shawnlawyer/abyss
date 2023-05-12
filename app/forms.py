@@ -1,4 +1,4 @@
-from os.path import join
+from os.path import join, expanduser
 import time
 from util import DataObject
 from const import *
@@ -11,29 +11,32 @@ class Forms():
 
     def forms_controller(self):
         if 'form' in SCREENS[self.state.active_screen]:
+            self.state.focus = 'form'
             form = SCREENS[self.state.active_screen]['form']
             form = self.get_form_config(form)
             form = self.set_form_screen_location(form, FORMS_WIDTH, FORMS_X, FORMS_Y, FORMS_ALIGN)
-            fields = self.form_fields(form['values'], form['labels'], form['validators'])
-            values = self.handle_form(fields, form['x'], form['y'], form['width'], form['header'])
-            form['handler'](values)
+            form['fields'] = self.form_fields(form['values'], form['labels'], form['validators'])
+            self.state.form = form
+            self.active_form_field = 0
+            self.handle_form()
+            self.state.focus = 'menu'
 
     def get_form_config(self, form):
-        def create_project_config_form_handler (fields):
-            self.state.configs = fields
+        def create_project_config_form_handler ():
+            self.state.configs = DataObject(self.state.form['output'])
             self.state.config_file = self.state.configs['name'] + '.json'
-            config_filepath = join(settings.configs_dir, self.state.config_file)
+            filepath = join(settings.configs_dir, self.state.config_file)
             self.state.configs.pop('name')
-            save_config(self.state.configs, config_filepath)
-            self.state.active_screen = 'main_menu'
-        def tuning_settings_form (fields): # this should be tune project
-            self.state.configs_tuning = fields
+            save_config(self.state.form['output'], filepath)
+            self.state.active_screen = 'home'
+        def tuning_settings_form (): # this should be tune project
+            self.state.configs_tuning = self.state.form['fields']
             self.state.active_screen = 'tuning_settings_detail'
-        def application_settings_form (fields):
-            self.state.settings = fields
-            config_filepath = join('~/', '.abyss')
-            save_config(self.state.settings, config_filepath)
-            self.state.active_screen = 'main_menu'
+        def application_settings_form ():
+            self.state.settings = DataObject(self.state.form['output'])
+            filepath = join(expanduser("~"), '.abyss')
+            save_config(self.state.form['output'], filepath)
+            self.state.active_screen = 'home'
 
         forms = {
             'create_project_config_form': {
@@ -41,7 +44,7 @@ class Forms():
                 'values': {**SAVE_FILE_FORM_FIELDS, **DEFAULTS},
                 'labels': {**SAVE_FILE_FORM_FIELD_LABELS, **DEFAULTS_LABELS},
                 'validators': {**SAVE_FILE_FORM_FIELD_VALIDATORS, **VALIDATORS},
-                'handler' : create_project_config_form_handler
+                'handler' : create_project_config_form_handler,
             },
             'tuning_settings_form': {
                 'header' : SCREENS['tune_project']['label'],
@@ -91,57 +94,70 @@ class Forms():
 
         return fields
 
-    def handle_form(self, fields, x=0, y=1, width=None, header=None): # becomes handle form
-        current_field = 0
+    def handle_form(self):
+        fields = self.state.form['fields']
+        selected = 0
 
         def form_key_handler(key, selected=0, options_length=None):
-            if key.is_sequence:
-                if key.name == 'KEY_UP':
-                    if selected > 0:
-                        fields[selected]['active'] = False
-                        selected -= 1
-                        fields[selected]['active'] = True
-                    return 'field_change_selected', selected
-                elif key.name == 'KEY_DOWN':
-                    if selected < len(fields) - 1:
-                        fields[selected]['active'] = False
-                        selected += 1
-                        fields[selected]['active'] = True
-                    return 'field_change_selected', selected
-                elif key.name == 'KEY_BACKSPACE':
-                    fields[selected]['response'] = fields[selected]['response'][:-1]
-                    return 'form_backspace', selected
-            else:
-                fields[selected]['response'] += key
-                return 'form_input', selected
+            if self.state.focus == 'form':
 
-            return None, None
+                if key.is_sequence:
+                    if key.name == 'KEY_UP':
+                        if self.active_form_field > 0:
+                            self.state.form['fields'][self.active_form_field]['active'] = False
+                            self.active_form_field -= 1
+                            self.state.form['fields'][self.active_form_field]['active'] = True
+                        return 'field_change_selected', self.active_form_field
+                    elif key.name == 'KEY_DOWN':
+                        if self.active_form_field < len(fields) - 1:
+                            self.state.form['fields'][self.active_form_field]['active'] = False
+                            self.active_form_field += 1
+                            self.state.form['fields'][self.active_form_field]['active'] = True
+                        return 'field_change_selected', self.active_form_field
+                    elif key.name == 'KEY_BACKSPACE':
+                        self.state.form['fields'][self.active_form_field]['response'] = fields[self.active_form_field]['response'][:-1]
+                        return 'form_backspace', self.active_form_field
+
+                    elif key.name == 'KEY_ENTER':
+                        invalid_fields = [field['prompt'] for field in fields if
+                                          not field['validator'](field['response'])]
+                        if not invalid_fields:
+                            values = {}
+                            for field in self.state.form['fields']:
+                                values[field['key']] = field['response']
+                            converted_dict = {}
+                            for key, value in values.items():
+                                if key in CONVERTERS:
+                                    try:
+                                        converted_dict[key] = CONVERTERS[key](value)
+                                    except Exception as e:
+                                        pass
+                                        # self.debug(f"Error converting key {key}: {e}")
+                                else:
+                                    # self.debug(f"No converter found for key {key}. Keeping value as is.")
+                                    converted_dict[key] = value
+                                self.state.form['output'] = converted_dict
+                        self.state.form['handler']()
+                        return 'enter', True
+                else:
+                    self.state.form['fields'][self.active_form_field]['response'] += key
+                    return 'form_input', self.active_form_field
+
+            return None, self.active_form_field
 
         custom_handlers = [form_key_handler]
-
         while True:
 
-            self.write_form_to_screen_buffer(fields, x, y, width, header)
-            action, current_field = self.handle_key_input(current_field, custom_handlers=custom_handlers)
+            self.write_form_to_screen_buffer(
+                self.state.form['fields'],
+                self.state.form['x'],
+                self.state.form['y'],
+                self.state.form['width'],
+                self.state.form['header']
+            )
+            action, selected = self.handle_key_input(selected, custom_handlers=custom_handlers)
             if action == 'enter':
-                invalid_fields = [field['prompt'] for field in fields if not field['validator'](field['response'])]
-                if invalid_fields:
-                    print(f'These fields have invalid inputs: {", ".join(invalid_fields)}')
-                else:
-                    values = {}
-                    for field in fields:
-                        values[field['key']] = field['response']
-                    converted_dict = {}
-                    for key, value in values.items():
-                        if key in CONVERTERS:
-                            try:
-                                converted_dict[key] = CONVERTERS[key](value)
-                            except Exception as e:
-                                print(f"Error converting key {key}: {e}")
-                        else:
-                            print(f"No converter found for key {key}. Keeping value as is.")
-                            converted_dict[key] = value
-                    return converted_dict
+                return
 
     def write_form_to_screen_buffer(self, fields, x=0, y=1, width=0, header=None):
         lines = []
@@ -149,16 +165,17 @@ class Forms():
             if field['active']:
                 # Toggle the display of the cursor character.
                 if time.time() % 1 < 0.5:
-                    text = field['prompt'] + field['response'] + '|'
+                    text = field['prompt'] + field['response'] + CURSOR
                 else:
                     text = field['prompt'] + field['response']
             else:
                 text = field['prompt'] + field['response']
 
-            text = text[:width - 2] + '...' if len(text) > width - 2 else text.ljust(width - 2)
 
             if not field['validator'](field['response']):
-                text += self.term.red(f'  Invalid input for field "{field["prompt"]}"!')
+                text +=  f"Woops!: {field['prompt']}"
+
+            text = text[:width - 2] + '...' if len(text) > width - 2 else text.ljust(width - 2)
 
             line = text
             lines.append(line)

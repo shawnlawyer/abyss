@@ -87,10 +87,12 @@ def save_config(config, filename)   :
     with open(filename, "w") as outfile:
         json.dump(config, outfile, indent=4)
 
-def load_config(filename):
+def load_config(filename, asDictObject=False):
+    if not os.path.isfile(filename):
+        return None
     with open(filename, "r") as infile:
         config = json.load(infile)
-    return config
+    return DataObject( config ) if asDictObject else config
 
 def make_system_directories():
     for dir in ["configs_dir", "logs_dir", "datasets_dir", "models_dir"]:
