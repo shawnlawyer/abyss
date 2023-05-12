@@ -43,7 +43,7 @@ options_help = DataObject(HELP)
 @click.option('--transfer-weights', help=options_help.transfer_weights)
 def main(**kwargs):
     if kwargs["config"]:
-        config_path = kwargs.config if isfile(kwargs["config"]) else join(settings.configs_dir, kwargs["config"])
+        config_path = kwargs.config if isfile(kwargs["config"]) else join(settings.projects_dir, kwargs["config"])
         config = load_config(config_path)
         args = DataObject(config)
         for key, value in kwargs.items():

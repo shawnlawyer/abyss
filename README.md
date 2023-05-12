@@ -35,7 +35,7 @@ Options:
 - `--recurrent-type`: Type of the recurrent layer (choices: "LSTM", "GRU"; default: "LSTM").
 - `--dropout`: Dropout rate for the recurrent layers (default: 0.0).
 - `--recurrent-dropout`: Recurrent dropout rate for the recurrent layers (default: 0.0).
-- `--config`: Path to the configuration JSON file (default: None).
+- `--config`: Path to the project configuration JSON file (default: None).
 - `--save-config`: Path to save the current configuration JSON file (default: None).
 - `--rebuild-model`: Build a new model instead of loading the last checkpoint (default: False).
 - `--chat`: Activate chat mode (default: False).

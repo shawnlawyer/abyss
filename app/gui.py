@@ -6,7 +6,7 @@ from menus import Menus
 from forms import Forms
 from reports import Reports
 from lang.en import *
-
+from os.path import join, expanduser
 settings = DataObject(SETTINGS)
 defaults = DataObject(DEFAULTS)
 
@@ -20,15 +20,14 @@ class GUI(UI, Menus, Forms, Reports):
         self.refresh_rate = REFRESH_RATE
         self.state.active_screen = 'home'
         self.state.focus = 'menu'
-        self.settings = load_config('~/.abyss', True)
+        self.settings = load_config(join(expanduser("~"), '.abyss'))
+
+        if not isinstance(self.settings, DataObject) :
+            self.settings = settings
+            self.state.active_screen = 'application_settings'
 
         self.threads = THREADS
         self.initialize_threads()
-
-        #self.debug('', True)
-        if isinstance(self.settings, DataObject) :
-            self.settings = settings
-            self.state.active_screen = 'application_settings'
 
 
 

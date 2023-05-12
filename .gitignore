@@ -2,6 +2,7 @@
 /logs/
 /datasets/
 /configs/
+/projects/
 .idea/
 __pycache__/
 

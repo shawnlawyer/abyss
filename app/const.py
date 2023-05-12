@@ -18,7 +18,7 @@ SAVE_FILE_FORM_FIELD_VALIDATORS = {
 }
 #!# Change this to Application Settings Defaults
 SETTINGS = {
-    "configs_dir": "configs",
+    "projects_dir": "configs",
     "logs_dir": "logs",
     "datasets_dir": "datasets",
     "models_dir": "models",
@@ -137,7 +137,7 @@ CONVERTERS = {
 }
 #!# change this to application settings validators
 SETTINGS_VALIDATORS = {
-    "configs_dir": lambda s: s.isalpha(),
+    "projects_dir": lambda s: s.isalpha(),
     "logs_dir": lambda s: s.isalpha(),
     "datasets_dir": lambda s: s.isalpha(),
     "models_dir": lambda s: s.isalpha(),

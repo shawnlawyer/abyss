@@ -25,7 +25,7 @@ class Forms():
         def create_project_config_form_handler ():
             self.state.configs = DataObject(self.state.form['output'])
             self.state.config_file = self.state.configs['name'] + '.json'
-            filepath = join(settings.configs_dir, self.state.config_file)
+            filepath = join(settings.projects_dir, self.state.config_file)
             self.state.configs.pop('name')
             save_config(self.state.form['output'], filepath)
             self.state.active_screen = 'home'
@@ -37,7 +37,6 @@ class Forms():
             filepath = join(expanduser("~"), '.abyss')
             save_config(self.state.form['output'], filepath)
             self.state.active_screen = 'home'
-
         forms = {
             'create_project_config_form': {
                 'header' : SCREENS['create_project']['label'],
@@ -55,7 +54,7 @@ class Forms():
             },
             'application_settings_form': {
                 'header' : SCREENS['application_settings']['label'],
-                'values': SETTINGS,
+                'values': self.settings.to_dict(),
                 'labels': SETTINGS_LABELS,
                 'validators': SETTINGS_VALIDATORS,
                 'handler' : application_settings_form

@@ -12,9 +12,8 @@ options_help = DataObject(HELP)
 
 def CLI(args, callbacks=[]):
 
-    if hasattr(args, 'save_config'):
-        config = vars(args)
-        save_config(config, args.save_config)
+    if hasattr(args, 'save_config'): #save_project_config
+        save_config(vars(args), args.save_config)
 
     if hasattr(args, 'no_gpu'):
         disable_gpu()

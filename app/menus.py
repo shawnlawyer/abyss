@@ -43,7 +43,7 @@ class Menus():
             self.handle_sidebar_menu()
 
     def get_menus(self):
-        config_files = glob(f"{settings.configs_dir}/*.json")
+        config_files = glob(f"{settings.projects_dir}/*.json")
         create_menu_options_map = ['create_project', 'tune_project']
         application_menu_options_map = ['application_settings']
         choose_project_options_map = [basename(config_file) for config_file in config_files] if config_files else []
@@ -56,7 +56,7 @@ class Menus():
         def handle_choose_project_menu(selection):
             state = {
                 'config_file': selection,
-                'configs': DataObject(load_config(join(settings.configs_dir, selection))),
+                'configs': DataObject(load_config(join(settings.projects_dir, selection))),
                 'active_screen': 'project_details'
             }
             self.state.update(state)
