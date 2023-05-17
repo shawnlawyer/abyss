@@ -44,8 +44,7 @@ options_help = DataObject(HELP)
 def main(**kwargs):
     if kwargs["config"]:
         config_path = kwargs.config if isfile(kwargs["config"]) else join(settings.projects_dir, kwargs["config"])
-        config = load_config(config_path)
-        args = DataObject(config)
+        args = load_config(config_path)
         for key, value in kwargs.items():
             if value:
                 setattr(args, key, None if value == "None" else value)

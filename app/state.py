@@ -4,15 +4,14 @@ class AppState(dict):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__dict__ = self
-        self.selection = None
         self.configs = None
         self.config_file = None
         self.active_screen = None
         self.sidebar_menu = None
         self.form = None
-        self.active_form_field = None
         self.lock = threading.Lock()
         self.focus = None
+        self.input_handlers = {'sidebar_menu':None, 'form':None}
 
     def __getitem__(self, key):
         return self.__dict__[key]

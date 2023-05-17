@@ -252,6 +252,9 @@ ACTIONS = {
         'sub_proc': ['python', 'app', '--config', '{config_file}', '--train'],
         'callback': 'draw_training_progress_report'
     },
+    'restart_training': {
+        'label': 'Restart Training',
+    },
 }
 
 THREADS = {
@@ -283,6 +286,9 @@ MENUS = {
     'project_options_menu': {
         'label':'Project Options'
     },
+    'project_training_menu': {
+        'label':'Restart Training'
+    },
     'application_menu': {
         'label':'Other'
     }
@@ -290,7 +296,7 @@ MENUS = {
 
 APP_TITLE = "Abyss"
 DEBUG_PAUSE_RATE = 0
-REFRESH_RATE = 0.15
+REFRESH_RATE = 0.1
 GUTTER = 1
 
 MENUS_WIDTH=28

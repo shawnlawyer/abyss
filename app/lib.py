@@ -83,7 +83,7 @@ def setup_training_data(args):
 
     return train_data, test_data
 
-def save_config(config, filename)   :
+def save_config(config, filename):
     with open(filename, "w") as outfile:
         json.dump(config, outfile, indent=4)
 
